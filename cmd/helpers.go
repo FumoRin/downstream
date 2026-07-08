@@ -37,34 +37,22 @@ func RunDownloadSession(m *downloader.DownloadManager) error {
 				filename := pCopy.Filename
 				bar := p.AddBar(pCopy.TotalSize,
 					mpb.PrependDecorators(
-						decor.Name(downloader.Truncate(filename, 20), decor.WC{W: 20, C: decor.DindentRight}),
+						decor.Name(downloader.Truncate(filename, 30), decor.WC{W: 30, C: decor.DindentRight}),
 						decor.Percentage(decor.WC{W: 6}),
 					),
 					mpb.AppendDecorators(
 						decor.Any(func(st decor.Statistics) string {
 							if v, ok := progressMap.Load(filename); ok {
 								currProg := v.(*downloader.Progress)
-								return fmt.Sprintf(" %s/%s",
+								return fmt.Sprintf(" %10s/%-10s %11s/s ETA %s",
 									downloader.FormatBytes(currProg.CurrentSize),
 									downloader.FormatBytes(currProg.TotalSize),
+									downloader.FormatBytes(int64(currProg.Speed)),
+									downloader.FormatTime(currProg.ETA),
 								)
 							}
 							return ""
-						}, decor.WC{W: 25, C: decor.DindentRight}),
-						decor.Any(func(st decor.Statistics) string {
-							if v, ok := progressMap.Load(filename); ok {
-								currProg := v.(*downloader.Progress)
-								return fmt.Sprintf("  %s/s", downloader.FormatBytes(int64(currProg.Speed)))
-							}
-							return ""
-						}, decor.WC{W: 15, C: decor.DindentRight}),
-						decor.Any(func(st decor.Statistics) string {
-							if v, ok := progressMap.Load(filename); ok {
-								currProg := v.(*downloader.Progress)
-								return fmt.Sprintf("  ETA %s", downloader.FormatTime(currProg.ETA))
-							}
-							return ""
-						}, decor.WC{W: 30, C: decor.DindentRight}),
+						}, decor.WC{W: 60, C: decor.DindentRight}),
 					),
 				)
 				bars.Store(filename, bar)

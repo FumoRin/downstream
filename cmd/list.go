@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
@@ -16,11 +18,20 @@ var listCmd = &cobra.Command{
 			return fmt.Errorf("failed to retrieve downloads: %v", err)
 		}
 
-		fmt.Printf("%-64s | %-30s | %s\n", "ID", "Filename", "Status")
-		for _, state := range states {
-			fmt.Printf("%-64s | %-30s | %s\n", state.ID, state.Filename, state.Status.String())
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+
+		_, printErr := fmt.Fprintln(w, "ID\tFilename\tStatus")
+		if printErr != nil {
+			return printErr
 		}
-		return nil
+
+		for _, state := range states {
+			_, printErr := fmt.Fprintf(w, "%s\t%s\t%s\n", state.ID, state.Filename, state.Status)
+			if printErr != nil {
+				return printErr
+			}
+		}
+		return w.Flush()
 	},
 }
 
