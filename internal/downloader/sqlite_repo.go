@@ -7,7 +7,7 @@ import (
 )
 
 type SQLiteRepository struct {
-	db *sql.DB
+db *sql.DB
 }
 
 func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
@@ -38,7 +38,7 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 	partQuery := `
 	CREATE TABLE IF NOT EXISTS download_part_progress (
 		id INTEGER PRIMARY KEY,
-		download_id TEXT REFERENCES download_metadata(id),
+		download_id TEXT REFERENCES download_metadata(id) ON DELETE CASCADE,
 		start_byte INTEGER NOT NULL,
 		end_byte INTEGER NOT NULL,
 		current_byte INTEGER NOT NULL,
@@ -205,4 +205,17 @@ func (r *SQLiteRepository) GetParts(downloadID string) ([]*PartState, error) {
 	}
 
 	return partState, nil
+}
+
+func (r *SQLiteRepository) DeletePart(downloadID string) error {
+	query := `
+	DELETE FROM download_part_progress WHERE download_id = ?
+	`
+
+	_, err := r.db.Exec(query, downloadID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

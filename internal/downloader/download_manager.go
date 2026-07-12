@@ -187,6 +187,9 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 
 	if downloadErr == nil {
 		state.Status = StateCompleted
+		if err := m.repo.DeletePart(job.ID); err != nil {
+			fmt.Printf("Failed to clean up workers tracking %s: %v\n", state.Filename, err)
+		}
 	} else if errors.Is(downloadErr, context.Canceled) {
 		state.Status = StatePaused
 	} else {

@@ -97,5 +97,6 @@ type DownloadRepository interface {
 	UpdatePartsProgress(partID string, currentByte int64) error
 	GetParts(downloadID string) ([]*PartState, error)
 	CreatePart(part *PartState) error
+	DeletePart(downloadID string) error
 	UpdateFilename(id string, newFilename string) error
 }
