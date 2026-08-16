@@ -1,8 +1,10 @@
 package downloader
 
 import (
+	"context"
 	"fmt"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -76,4 +78,60 @@ func GetUniqueFilename(filename string) string {
 		}
 		counter++
 	}
+}
+
+func supportsMultiPart(resp *http.Response) bool {
+	if resp.ContentLength <= 0 {
+		return false
+	}
+
+	acceptedRanges := strings.ToLower(resp.Header.Get("Accepted-Ranges"))
+	if acceptedRanges == "bytes" {
+		return true
+	}
+
+	if resp.Header.Get("Content-Range") != ""{
+		return true
+	}
+
+	return false
+}
+
+func probeServerSupport (ctx context.Context, client *http.Client, url string) (totalSize int64, multiPartSupported bool, filename string, err error) {
+	req, err := http.NewRequestWithContext(ctx, "HEAD", url, nil)
+	if err != nil {
+		return 0, false, "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, false, "", err
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode == http.StatusOK {
+		totalSize = resp.ContentLength
+		multiPartSupported = supportsMultiPart(resp)
+		filename = resolveFilename(url, DownloadOptions{}, resp)
+		return totalSize, multiPartSupported, filename, nil
+	}
+	
+	getReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return 0, false, "", err
+	}
+
+	getReq.Header.Set("Range", "bytes=0-0")
+
+	getResp, err := client.Do(getReq)
+	if err != nil {
+		return 0, false, "", err
+	}
+	defer getResp.Body.Close()
+
+	if getResp.StatusCode == http.StatusPartialContent {
+		multiPartSupported = true
+	}
+
+	return totalSize, multiPartSupported, filename, nil
 }
