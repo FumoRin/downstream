@@ -140,6 +140,7 @@ func getOsPartHelper(downloadID string, totalSize int64, numParts int, repo Down
 				return nil, err
 			}
 		}
+		parts = append(parts, part)
 	}
 
 	return parts, nil
@@ -232,6 +233,9 @@ func downloadParts(
 	for {
 		select {
 		case <-ctx.Done():
+			if repo != nil {
+				_ = repo.UpdatePartsProgress(part.ID, part.CurrentByte)
+			}
 			return ctx.Err()
 		default:
 		}
