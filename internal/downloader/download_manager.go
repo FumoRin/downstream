@@ -22,7 +22,7 @@ func (m *DownloadManager) StartWorker(count int) {
 	}
 }
 
-// Start a Download  
+// Start a Download
 func (m *DownloadManager) StartDownload(generatedID string, url string, filename string) {
 	state, err := m.repo.GetDownload(generatedID)
 	if err != nil || state == nil {
@@ -168,6 +168,7 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 		URL:      job.URL,
 		Filename: job.Filename,
 		Progress: m.progress,
+		Repo:     m.repo,
 	}
 
 	totalSize, filename, downloadErr := Download(job.ID, job.URL, opts, ctx)

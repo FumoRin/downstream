@@ -37,7 +37,7 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 
 	partQuery := `
 	CREATE TABLE IF NOT EXISTS download_part_progress (
-		id INTEGER PRIMARY KEY,
+		id TEXT PRIMARY KEY,
 		download_id TEXT REFERENCES download_metadata(id) ON DELETE CASCADE,
 		start_byte INTEGER NOT NULL,
 		end_byte INTEGER NOT NULL,

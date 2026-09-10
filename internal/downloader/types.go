@@ -23,6 +23,7 @@ type DownloadOptions struct {
 	Filename string
 	Size     int64
 	Progress chan Progress
+	Repo     DownloadRepository
 }
 
 type DownloadJob struct {
@@ -99,4 +100,10 @@ type DownloadRepository interface {
 	CreatePart(part *PartState) error
 	DeletePart(downloadID string) error
 	UpdateFilename(id string, newFilename string) error
+}
+
+type TargetInfo struct {
+	Filename         string
+	TotalSize        int64
+	SupportMultiPart bool
 }
