@@ -16,7 +16,14 @@ func TestDownloadManagerQueue(t *testing.T) {
 
 	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
-	repo, _ := NewSQLiteRepository(dbPath)
+	repo, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
+	setting, err := repo.GetAllSettings()
+	if err != nil {
+		t.Fatalf("failed to retrieved settings: %v", err)
+	}
 
 	workingWd, _ := os.Getwd()
 	_ = os.Chdir(tempDir)
@@ -24,7 +31,7 @@ func TestDownloadManagerQueue(t *testing.T) {
 		_ = os.Chdir(workingWd)
 	}()
 
-	mgr := NewDownloadManager(repo)
+	mgr := NewDownloadManager(repo, setting)
 	mgr.StartWorker(2)
 	for i := range 4 {
 		id := fmt.Sprintf("job-%d", i)
@@ -56,7 +63,14 @@ func TestDownloadManagerStop(t *testing.T) {
 
 	tempDir := os.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
-	repo, _ := NewSQLiteRepository(dbPath)
+	repo, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}	
+	setting, err := repo.GetAllSettings()
+	if err != nil {
+		t.Fatalf("failed to retrieved settings: %v", err)
+	}
 
 	originalWd, _ := os.Getwd()
 	_ = os.Chdir(tempDir)
@@ -65,7 +79,7 @@ func TestDownloadManagerStop(t *testing.T) {
 		_ = os.Chdir(originalWd)
 	}()
 
-	mgr := NewDownloadManager(repo)
+	mgr := NewDownloadManager(repo, setting)
 	mgr.StartWorker(1)
 
 	JobID := "job-to-stop"
@@ -90,9 +104,16 @@ func TestDownloadManagerStop(t *testing.T) {
 func TestDownloadManagerDelete(t *testing.T) {
 	tempDir := os.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
-	repo, _ := NewSQLiteRepository(dbPath)
+	repo, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
+	setting, err := repo.GetAllSettings()
+	if err != nil {
+		t.Fatalf("failed to retrieved settings: %v", err)
+	}
 
-	mgr := NewDownloadManager(repo)
+	mgr := NewDownloadManager(repo, setting)
 
 	filepath := filepath.Join(tempDir, "sample.bin")
 	_ = os.WriteFile(filepath, []byte("test content"), 0o644)
@@ -105,7 +126,7 @@ func TestDownloadManagerDelete(t *testing.T) {
 		Status:   StateCompleted,
 	})
 
-	err := mgr.DeleteDownload(jobID, false)
+	err = mgr.DeleteDownload(jobID, false)
 	if err != nil {
 		t.Fatalf("failed to delete download record: %v", err)
 	}

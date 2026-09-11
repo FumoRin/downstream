@@ -24,6 +24,7 @@ type DownloadOptions struct {
 	Size     int64
 	Progress chan Progress
 	Repo     DownloadRepository
+	Settings *Settings
 }
 
 type DownloadJob struct {
@@ -41,6 +42,7 @@ type DownloadManager struct {
 	cancellations   map[string]context.CancelFunc
 	ctx             context.Context
 	cancel          context.CancelFunc
+	settings        *Settings
 }
 
 type DownloadState struct {
@@ -106,4 +108,17 @@ type TargetInfo struct {
 	Filename         string
 	TotalSize        int64
 	SupportMultiPart bool
+}
+
+type Settings struct {
+	DownloadDir            string
+	MaxConcurrencyDownload int
+	PartsPerDownload       int
+	MinMultiPartDownload   int64
+}
+
+type Category struct {
+	Name       string
+	FolderPath string
+	Extension  []string
 }

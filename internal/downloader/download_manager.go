@@ -132,7 +132,7 @@ func (m *DownloadManager) DeleteDownload(id string, deleteFiles bool) error {
 	return nil
 }
 
-func NewDownloadManager(repo DownloadRepository) *DownloadManager {
+func NewDownloadManager(repo DownloadRepository, settings *Settings) *DownloadManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &DownloadManager{
 		job:           make(chan DownloadJob, 1000),
@@ -141,6 +141,7 @@ func NewDownloadManager(repo DownloadRepository) *DownloadManager {
 		cancellations: make(map[string]context.CancelFunc),
 		ctx:           ctx,
 		cancel:        cancel,
+		settings:      settings,
 	}
 }
 
@@ -169,6 +170,7 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 		Filename: job.Filename,
 		Progress: m.progress,
 		Repo:     m.repo,
+		Settings: m.settings,
 	}
 
 	totalSize, filename, downloadErr := Download(job.ID, job.URL, opts, ctx)

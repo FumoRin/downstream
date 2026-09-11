@@ -2,12 +2,16 @@ package downloader
 
 import (
 	"database/sql"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
 
 type SQLiteRepository struct {
-db *sql.DB
+	db *sql.DB
 }
 
 func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
@@ -31,7 +35,8 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 		url TEXT NOT NULL,
 		filename TEXT NOT NULL,
 		total_size INTEGER,
-		status INTEGER
+		status INTEGER,
+		categories TEXT
 	);
 	`
 
@@ -46,10 +51,31 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 	);
 	`
 
+	settingsQuery := `
+	CREATE TABLE IF NOT EXISTS settings (
+		key TEXT PRIMARY KEY,
+		value TEXT NOT NULL
+	)
+	`
+
+	categoriesQuery := `
+	CREATE TABLE IF NOT EXISTS categories (
+		name TEXT PRIMARY KEY,
+		folder_path TEXT NOT NULL,
+		extension TEXT NOT NULL
+	)
+	`
+
 	if _, err := conn.Exec(metadataQuery); err != nil {
 		return nil, err
 	}
 	if _, err := conn.Exec(partQuery); err != nil {
+		return nil, err
+	}
+	if _, err := conn.Exec(settingsQuery); err != nil {
+		return nil, err
+	}
+	if _, err := conn.Exec(categoriesQuery); err != nil {
 		return nil, err
 	}
 	return &SQLiteRepository{db: conn}, nil
@@ -218,4 +244,123 @@ func (r *SQLiteRepository) DeletePart(downloadID string) error {
 	}
 
 	return nil
+}
+
+func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
+	home, _ := os.UserHomeDir()
+	defaultDownloads := filepath.Join(home, "Downloads")
+
+	settings := &Settings{
+		DownloadDir:            defaultDownloads,
+		MaxConcurrencyDownload: 3,
+		PartsPerDownload:       4,
+		MinMultiPartDownload:   5 * 1024 * 1024,
+	}
+
+	rows, err := r.db.Query("SELECT key, value FROM settings")
+	if err != nil {
+		return settings, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	for rows.Next() {
+		var key, val string
+		if err := rows.Scan(&key, &val); err != nil {
+			continue
+		}
+
+		switch key {
+		case "download_dir":
+			settings.DownloadDir = val
+		case "max_concurrent_download":
+			if n, err := strconv.Atoi(val); err == nil {
+				settings.MaxConcurrencyDownload = n
+			}
+		case "per_part_download":
+			if n, err := strconv.Atoi(val); err == nil {
+				settings.PartsPerDownload = n
+			}
+		case "min_multi_part_size":
+			if n, err := strconv.ParseInt(val, 10, 64); err == nil && n > 0 {
+				settings.MinMultiPartDownload = n
+			}
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return settings, nil
+}
+
+func (r *SQLiteRepository) SetSettings(key, value string) error {
+	query := `
+		INSERT INTO settings (key, value) VALUES (?, ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+	`
+	_, err := r.db.Exec(query, key, value)
+	return err
+}
+
+func (r *SQLiteRepository) SeedDefaultCategories(defaultDownloadDir string) error {
+	defaults := []struct {
+		name      string
+		folder    string
+		extension string
+	}{
+		{"videos", filepath.Join(defaultDownloadDir, "Videos"), "mp4,mkv,avi,mov,flv,webm"},
+		{"Music", filepath.Join(defaultDownloadDir, "Music"), "mp3,wav,flac,aac,ogg,m4a"},                                                                                                                      
+		{"Documents", filepath.Join(defaultDownloadDir, "Documents"), "pdf,doc,docx,xls,xlsx,ppt,pptx,txt,epub"},                                                                                               
+		{"Archives", filepath.Join(defaultDownloadDir, "Archives"), "zip,rar,7z,tar,gz,bz2,xz"},                                                                                                                
+		{"Programs", filepath.Join(defaultDownloadDir, "Programs"), "exe,msi,dmg,deb,rpm,AppImage,iso"},                                                                                                        
+	}
+
+	for _, d := range defaults {
+		query := `INSERT OR IGNORE INTO categories (name, folder, extension) VALUES (?, ?, ?)`
+		if _, err := r.db.Exec(query, d.name, d.folder, d.extension); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *SQLiteRepository) GetCategories() ([]*Category, error) {
+	rows, err := r.db.Query("SELECT name, folder_path, extension FROM categories")
+	if err != nil {
+		return nil, err
+	}
+	defer func()  {
+		_ = rows.Close()
+	}()
+
+	var categories []*Category
+	for rows.Next() {
+		var name, folder, ext string
+		if err := rows.Scan(&name, &folder, &ext); err != nil {
+			return nil, err
+		}
+
+		var extList []string
+		for e := range strings.SplitSeq(ext, ",") {
+			trimmed := strings.TrimSpace(e)
+			if trimmed != "" {
+				extList = append(extList, trimmed)
+			}
+		}
+
+		categories = append(categories, &Category{
+			Name: name,
+			FolderPath: folder,
+			Extension: extList,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return categories, nil
 }

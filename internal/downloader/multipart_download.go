@@ -13,9 +13,11 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultConcurrency = 4
-
 func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOptions, ctx context.Context) (int64, string, error) {
+	concurrency := 4
+	if opts.Settings != nil && opts.Settings.PartsPerDownload > 0 {
+		concurrency = opts.Settings.PartsPerDownload
+	}
 	tmpFilename := info.Filename + "." + id + ".tmp"
 	totalSize := info.TotalSize
 
@@ -31,7 +33,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 		return 0, "", fmt.Errorf("failed to truncate file: %w", err)
 	}
 
-	parts, err := getOsPartHelper(id, totalSize, defaultConcurrency, opts.Repo)
+	parts, err := getOsPartHelper(id, totalSize, concurrency, opts.Repo)
 	if err != nil {
 		return 0, "", fmt.Errorf("failed to initialize parts: %w", err)
 	}

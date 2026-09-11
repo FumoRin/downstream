@@ -34,8 +34,9 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to initialized downloader database: %w", err)
 		}
 
-		app.Manager = downloader.NewDownloadManager(repo)
-		app.Manager.StartWorker(3)
+		settings, _ := repo.GetAllSettings()
+		app.Manager = downloader.NewDownloadManager(repo, settings)
+		app.Manager.StartWorker(settings.MaxConcurrencyDownload)
 
 		return nil
 	},

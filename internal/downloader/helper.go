@@ -87,9 +87,9 @@ func supportsMultiPart(resp *http.Response) bool {
 	}
 
 	if strings.EqualFold(resp.Header.Get("Accept-Ranges"), "bytes") {
-		return  true
+		return true
 	}
-	
+
 	if resp.Header.Get("Content-Range") != "" {
 		return true
 	}
@@ -163,4 +163,21 @@ func parseTotalSize(contentRange string) int64 {
 	}
 
 	return size
+}
+
+func ResolveDestination(filename string, categories []*Category, defaultDir string) (string, string) {
+	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(filename), "."))
+
+	for _, cat := range categories {
+		for _, catExt := range cat.Extension {
+			if strings.EqualFold(ext, catExt) {
+				_ = os.MkdirAll(cat.FolderPath, 0o755)
+				return filepath.Join(cat.FolderPath, filename), cat.Name
+			}
+		}
+	}
+
+	// Fallback to default downloads directory
+	_ = os.MkdirAll(defaultDir, 0o755)
+	return filepath.Join(defaultDir, filename), "General"
 }

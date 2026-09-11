@@ -60,7 +60,10 @@ func TestSQLiteRepository_CRUD(t *testing.T) {
 
 func TestSQLiteRepository_IncompleteDownloads(t *testing.T) {
 	tempDir := t.TempDir()
-	repo, _ := NewSQLiteRepository(filepath.Join(tempDir, "test.db"))
+	repo, err := NewSQLiteRepository(filepath.Join(tempDir, "test.db"))
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
 
 	_ = repo.SaveDownload(&DownloadState{ID: "1", Status: StateCompleted})
 	_ = repo.SaveDownload(&DownloadState{ID: "2", Status: StatePaused})
@@ -78,7 +81,10 @@ func TestSQLiteRepository_IncompleteDownloads(t *testing.T) {
 
 func TestSQLiteRepository_PartsAndCascadeDelete(t *testing.T) {
 	tempDir := t.TempDir()
-	repo, _ := NewSQLiteRepository(filepath.Join(tempDir, "test.db"))
+	repo, err := NewSQLiteRepository(filepath.Join(tempDir, "test.db"))
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
 
 	// 1. Create parent download
 	_ = repo.SaveDownload(&DownloadState{ID: "dl-parent", Status: StateDownloading})
