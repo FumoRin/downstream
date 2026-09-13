@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -282,4 +283,68 @@ func TestGetUniqueFilename(t *testing.T) {
 	if uniqueName != expected {
 		t.Errorf("expected %s, got %s", expected, uniqueName)
 	}
+}
+
+func TestMultiPartRetryWhenConnectionDrop(t *testing.T) {
+	payload := make([]byte, 6*1024*1024)
+	_, _ = rand.Read(payload)
+	
+	var requestCount atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count := requestCount.Add(1)
+		if count == 2 {
+			hj, ok := w.(http.Hijacker)
+			if ok {
+				conn, _, _ := hj.Hijack()
+				_ = conn.Close()
+				return
+			}
+		}
+		http.ServeContent(w, r, "retry_test.bin", time.Now(), bytes.NewReader(payload))
+	}))
+	defer server.Close()
+
+	tempDir := t.TempDir()
+	repo, err := NewSQLiteRepository(filepath.Join(tempDir, "test.db"))
+	if err != nil {
+		t.Fatalf("error creating repo: %v", err)
+	}
+
+	originalWd, _ := os.Getwd()
+	_ = os.Chdir(tempDir)
+	defer func() {
+		_ = os.Chdir(originalWd)
+	}()
+
+	opts := DownloadOptions{
+		Filename: "retry_test.bin",
+		Repo: repo,
+		Progress: make(chan Progress, 100),
+	}
+
+	_ = repo.SaveDownload(&DownloadState{
+		ID: "job-retry",
+		URL: server.URL,
+		Filename: "retry_test.bin",
+		TotalSize: int64(len(payload)),
+		Status: StateDownloading,
+	})
+
+	totalSize, finalFilename, err := Download("job-retry", server.URL, opts, context.Background())
+	if err != nil {
+		t.Fatalf("Download should have recovered from network drop, but failed: %v", err)
+	}
+
+	if totalSize != int64(len(payload)) {
+		t.Errorf("expected size %d, got %d", len(payload), totalSize)
+	}
+
+	downloaded, _ := os.ReadFile(finalFilename)
+	if !bytes.Equal(downloaded, payload) {
+		t.Errorf("downloaded file corrupted after recovery")
+	}
+
+
+
 }

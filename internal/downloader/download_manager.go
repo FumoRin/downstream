@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// Start a download worker for each job
+// StartWorker Start a download worker for each job
 func (m *DownloadManager) StartWorker(count int) {
 	for range count {
 		go func() {
@@ -22,7 +22,7 @@ func (m *DownloadManager) StartWorker(count int) {
 	}
 }
 
-// Start a Download
+// StartDownload Start a Download
 func (m *DownloadManager) StartDownload(generatedID string, url string, filename string) {
 	state, err := m.repo.GetDownload(generatedID)
 	if err != nil || state == nil {

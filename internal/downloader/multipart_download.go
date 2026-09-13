@@ -95,12 +95,12 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 	if opts.Progress != nil {
 		select {
 		case opts.Progress <- Progress{
-			Filename: finalFilename,
-			Percentage: 100.0,
+			Filename:    finalFilename,
+			Percentage:  100.0,
 			CurrentSize: totalSize,
-			TotalSize: totalSize,
-			Speed: 0,
-			ETA: 0,
+			TotalSize:   totalSize,
+			Speed:       0,
+			ETA:         0,
 		}:
 		default:
 		}
@@ -211,11 +211,47 @@ func downloadParts(
 		return nil
 	}
 
+	var lastErr error
+	for attempt := range defaultMaxRetries {
+		lastErr = downloadPartAttempt(ctx, client, url, file, part, repo, totalDownloaded)
+		if lastErr == nil {
+			return nil
+		}
+
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		if attempt == defaultMaxRetries-1 {
+			backOff := calculateBackOff(attempt, defaultBaseDelay, defaultMaxDelay)
+			if sleepErr := sleepWithContext(ctx, backOff); sleepErr != nil {
+				return sleepErr
+			}
+		}
+	}
+
+	return fmt.Errorf("worker %s exceeded max retries (%d): %w", part.WorkerID, defaultMaxRetries, lastErr)
+}
+
+func downloadPartAttempt(
+	ctx context.Context,
+	client *http.Client,
+	url string,
+	file *os.File,
+	part *PartState,
+	repo DownloadRepository,
+	totalDownloaded *atomic.Int64,
+) error {
 	reqStart := part.StartByte + part.CurrentByte
+	if reqStart > part.EndByte {
+		return nil
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", reqStart, part.EndByte))
 	resp, err := client.Do(req)
 	if err != nil {
@@ -226,12 +262,11 @@ func downloadParts(
 	}()
 
 	if resp.StatusCode != http.StatusPartialContent {
-		return fmt.Errorf("unexpected status: %d for byte range %d-%d (expected 206 Partial Content)", resp.StatusCode, reqStart, part.EndByte)
+		return fmt.Errorf("unexpected status: %d (expected 206 Partial Content)", resp.StatusCode)
 	}
 
 	buf := make([]byte, 32*1024)
 	lastPersist := time.Now()
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -241,18 +276,16 @@ func downloadParts(
 			return ctx.Err()
 		default:
 		}
-
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
 			offset := part.StartByte + part.CurrentByte
 			if _, err := file.WriteAt(buf[:n], offset); err != nil {
-				return fmt.Errorf("write error at offset %d: %w", offset, err)
+				return fmt.Errorf("write error at offset %d: %v", offset, err)
 			}
 
 			part.CurrentByte += int64(n)
 			totalDownloaded.Add(int64(n))
 
-			// Periodically save part progress to SQLite (every 500ms)
 			if repo != nil && time.Since(lastPersist) > 500*time.Millisecond {
 				_ = repo.UpdatePartsProgress(part.ID, part.CurrentByte)
 				lastPersist = time.Now()
@@ -264,10 +297,8 @@ func downloadParts(
 				if repo != nil {
 					_ = repo.UpdatePartsProgress(part.ID, part.CurrentByte)
 				}
-
 				return nil
 			}
-
 			return readErr
 		}
 	}
