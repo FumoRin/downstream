@@ -36,6 +36,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		settings, _ := repo.GetAllSettings()
+		_ = repo.SeedDefaultCategories(settings.DownloadDir)
 		app.Manager = downloader.NewDownloadManager(repo, settings)
 		app.Manager.StartWorker(settings.MaxConcurrencyDownload)
 		app.Manager.StartScheduler(1 * time.Second)

@@ -13,6 +13,7 @@ import (
 var (
 	filename     string
 	rateLimitStr string
+	destDir      string
 	atStr        string
 	inStr        string
 )
@@ -63,7 +64,7 @@ var downloadCmd = &cobra.Command{
 
 		for _, url := range args {
 			ID := uuid.NewString()
-			m.StartDownload(ID, url, filename, limiter)
+			m.StartDownload(ID, url, filename, destDir, limiter)
 		}
 		defer m.Close()
 
@@ -79,6 +80,7 @@ func init() {
 		"",
 		"The output filename provided by user (Only for a single download)",
 	)
+	downloadCmd.Flags().StringVarP(&destDir, "dir", "d", "", "Custom destination directory overriding default directory")
 	downloadCmd.Flags().StringVarP(&rateLimitStr, "limit", "l", "", "Limit download speed (e.g. 500K, 2MB, etc)")
 	downloadCmd.Flags().StringVar(&atStr, "at", "", "Schedule download at time (e.g. '23:00' or '2026-09-15 02:00')")
 	downloadCmd.Flags().StringVar(&inStr, "in", "", "Schedule download after duration (e.g. '30m', '2h')")

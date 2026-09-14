@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -37,7 +38,7 @@ func RunDownloadSession(m *downloader.DownloadManager) error {
 				filename := pCopy.Filename
 				bar := p.AddBar(pCopy.TotalSize,
 					mpb.PrependDecorators(
-						decor.Name(downloader.Truncate(filename, 30), decor.WC{W: 30, C: decor.DindentRight}),
+						decor.Name(downloader.Truncate(filepath.Base(filename), 30), decor.WC{W: 30, C: decor.DindentRight}),
 						decor.Percentage(decor.WC{W: 6}),
 					),
 					mpb.AppendDecorators(

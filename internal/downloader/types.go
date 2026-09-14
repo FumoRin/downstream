@@ -24,6 +24,7 @@ const (
 type DownloadOptions struct {
 	URL      string
 	Filename string
+	Dir      string
 	Size     int64
 	Progress chan Progress
 	Repo     DownloadRepository
@@ -34,6 +35,7 @@ type DownloadOptions struct {
 type DownloadJob struct {
 	ID       string
 	URL      string
+	Dir      string
 	Filename string
 	Limiter  *rate.Limiter
 }
@@ -54,6 +56,7 @@ type DownloadState struct {
 	ID          string
 	URL         string
 	Filename    string
+	Category    string
 	TotalSize   int64
 	Status      DownloadStatus
 	ScheduledAt *time.Time
@@ -108,7 +111,8 @@ type DownloadRepository interface {
 	CreatePart(part *PartState) error
 	DeletePart(downloadID string) error
 	UpdateFilename(id string, newFilename string) error
-	GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error) 
+	GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error)
+	GetCategories() ([]*Category, error)
 }
 
 type TargetInfo struct {

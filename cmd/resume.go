@@ -44,7 +44,7 @@ var resumeCmd = &cobra.Command{
 				state.Status != downloader.StateDownloading &&
 				state.Status != downloader.StateQueue {
 				fmt.Printf("Resuming specific download: %s\n", state.Filename)
-				m.StartDownload(targetID, state.URL, state.Filename, limiter)
+				m.StartDownload(targetID, state.URL, state.Filename, "", limiter)
 			} else {
 				fmt.Printf("Download %s is already completed\n", state.Filename)
 			}
@@ -64,7 +64,7 @@ var resumeCmd = &cobra.Command{
 				if state.Status == downloader.StateScheduled {
 					continue // skip the scheduled one, let it trigger by itself
 				}
-				m.StartDownload(state.ID, state.URL, state.Filename, limiter)
+				m.StartDownload(state.ID, state.URL, state.Filename, "", limiter)
 			}
 		}
 

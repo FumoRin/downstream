@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -27,7 +28,7 @@ func (m *DownloadManager) StartWorker(count int) {
 }
 
 // StartDownload Start a Download
-func (m *DownloadManager) StartDownload(generatedID string, url string, filename string, limiters ...*rate.Limiter) {
+func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, limiters ...*rate.Limiter) {
 	var limiter *rate.Limiter
 	if len(limiters) > 0 {
 		limiter = limiters[0]
@@ -60,7 +61,7 @@ func (m *DownloadManager) StartDownload(generatedID string, url string, filename
 		m.wg.Done()
 		return
 
-	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Limiter: limiter}:
+	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Dir: dir,Limiter: limiter}:
 		return
 	}
 }
@@ -177,6 +178,7 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 	opts := DownloadOptions{
 		URL:      job.URL,
 		Filename: job.Filename,
+		Dir:      job.Dir,
 		Progress: m.progress,
 		Repo:     m.repo,
 		Settings: m.settings,
@@ -192,6 +194,12 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 
 	if filename != "" {
 		state.Filename = filename
+		if m.repo != nil && m.settings != nil {
+			if categories, catErr := m.repo.GetCategories(); catErr == nil {
+				_, catName := ResolveDestination(filepath.Base(filename), categories, m.settings.DownloadDir)
+				state.Category = catName
+			}
+		}
 	}
 
 	if totalSize > 0 {
@@ -275,7 +283,7 @@ func (m *DownloadManager) checkScheduledDownloads() {
 	}
 
 	for _, item := range due {
-		m.StartDownload(item.ID, item.URL, item.Filename, nil)
+		m.StartDownload(item.ID, item.URL, item.Filename, "",  nil)
 	}
 }
 

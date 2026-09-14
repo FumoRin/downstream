@@ -90,16 +90,17 @@ func (r *SQLiteRepository) SaveDownload(state *DownloadState) error {
 	}
 
 	query := `
-	INSERT INTO download_metadata (id, url, filename, total_size, status, scheduled_at)
-	VALUES (?, ?, ?, ?, ?, ?)
+	INSERT INTO download_metadata (id, url, filename, categories, total_size, status, scheduled_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET 
 		url = excluded.url,
 		filename = excluded.filename,
+		categories = excluded.categories,
 		total_size = excluded.total_size,
 		status = excluded.status,
 		scheduled_at = excluded.scheduled_at;
 	`
-	_, err := r.db.Exec(query, state.ID, state.URL, state.Filename, state.TotalSize, state.Status, scheduledUnix)
+	_, err := r.db.Exec(query, state.ID, state.URL, state.Filename, state.Category, state.TotalSize, state.Status, scheduledUnix)
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func (r *SQLiteRepository) GetDownload(id string) (*DownloadState, error) {
 	var status int
 	var scheduledUnix sql.NullInt64
 
-	err := r.db.QueryRow("SELECT id, url, filename, total_size, status, scheduled_at FROM download_metadata WHERE id = ?", id).Scan(&state.ID, &state.URL, &state.Filename, &state.TotalSize, &status, &scheduledUnix)
+	err := r.db.QueryRow("SELECT id, url, filename, categories, total_size, status, scheduled_at FROM download_metadata WHERE id = ?", id).Scan(&state.ID, &state.URL, &state.Filename, &state.Category, &state.TotalSize, &status, &scheduledUnix)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -134,7 +135,7 @@ func scanDownloadRows(rows *sql.Rows) ([]*DownloadState, error) {
 		s := &DownloadState{}
 		var status int
 		var scheduledUnix sql.NullInt64
-		if err := rows.Scan(&s.ID, &s.URL, &s.Filename, &s.TotalSize, &status, &scheduledUnix); err != nil {
+		if err := rows.Scan(&s.ID, &s.URL, &s.Filename, &s.Category, &s.TotalSize, &status, &scheduledUnix); err != nil {
 			return nil, err
 		}
 		s.Status = DownloadStatus(status)
@@ -148,7 +149,7 @@ func scanDownloadRows(rows *sql.Rows) ([]*DownloadState, error) {
 }
 
 func (r *SQLiteRepository) GetIncompleteDownload() ([]*DownloadState, error) {
-	rows, err := r.db.Query("SELECT id, url, filename, total_size, status, scheduled_at FROM download_metadata WHERE status != ?", StateCompleted)
+	rows, err := r.db.Query("SELECT id, url, filename, categories, total_size, status, scheduled_at FROM download_metadata WHERE status != ?", StateCompleted)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +162,7 @@ func (r *SQLiteRepository) GetIncompleteDownload() ([]*DownloadState, error) {
 }
 
 func (r *SQLiteRepository) GetAllDownloads() ([]*DownloadState, error) {
-	rows, err := r.db.Query("SELECT id, url, filename, total_size, status, scheduled_at FROM download_metadata")
+	rows, err := r.db.Query("SELECT id, url, filename, categories, total_size, status, scheduled_at FROM download_metadata")
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +329,7 @@ func (r *SQLiteRepository) SeedDefaultCategories(defaultDownloadDir string) erro
 		folder    string
 		extension string
 	}{
-		{"videos", filepath.Join(defaultDownloadDir, "Videos"), "mp4,mkv,avi,mov,flv,webm"},
+		{"Videos", filepath.Join(defaultDownloadDir, "Videos"), "mp4,mkv,avi,mov,flv,webm"},
 		{"Music", filepath.Join(defaultDownloadDir, "Music"), "mp3,wav,flac,aac,ogg,m4a"},                                                                                                                      
 		{"Documents", filepath.Join(defaultDownloadDir, "Documents"), "pdf,doc,docx,xls,xlsx,ppt,pptx,txt,epub"},                                                                                               
 		{"Archives", filepath.Join(defaultDownloadDir, "Archives"), "zip,rar,7z,tar,gz,bz2,xz"},                                                                                                                
@@ -336,7 +337,7 @@ func (r *SQLiteRepository) SeedDefaultCategories(defaultDownloadDir string) erro
 	}
 
 	for _, d := range defaults {
-		query := `INSERT OR IGNORE INTO categories (name, folder, extension) VALUES (?, ?, ?)`
+		query := `INSERT OR IGNORE INTO categories (name, folder_path, extension) VALUES (?, ?, ?)`
 		if _, err := r.db.Exec(query, d.name, d.folder, d.extension); err != nil {
 			return err
 		}
@@ -385,7 +386,7 @@ func (r *SQLiteRepository) GetCategories() ([]*Category, error) {
 
 func (r *SQLiteRepository) GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error) {
 	query := `
-	SELECT id, url, filename, total_size, status, scheduled_at
+	SELECT id, url, filename, categories, total_size, status, scheduled_at
 	FROM download_metadata
 	WHERE status = ? AND scheduled_at IS NOT NULL AND scheduled_at <= ?
 	`

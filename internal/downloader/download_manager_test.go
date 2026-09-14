@@ -35,7 +35,7 @@ func TestDownloadManagerQueue(t *testing.T) {
 	mgr.StartWorker(2)
 	for i := range 4 {
 		id := fmt.Sprintf("job-%d", i)
-		mgr.StartDownload(id, server.URL, fmt.Sprintf("file-%d.bin", i))
+		mgr.StartDownload(id, server.URL, fmt.Sprintf("file-%d.bin", i), "", nil)
 	}
 
 	mgr.Close()
@@ -83,7 +83,7 @@ func TestDownloadManagerStop(t *testing.T) {
 	mgr.StartWorker(1)
 
 	JobID := "job-to-stop"
-	mgr.StartDownload(JobID, server.URL, "slow.bin")
+	mgr.StartDownload(JobID, server.URL, "slow.bin", "", nil)
 
 	time.Sleep(30 * time.Millisecond)
 
