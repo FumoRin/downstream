@@ -18,6 +18,7 @@ const (
 	StatePaused
 	StateCompleted
 	StateError
+	StateScheduled
 )
 
 type DownloadOptions struct {
@@ -50,11 +51,12 @@ type DownloadManager struct {
 }
 
 type DownloadState struct {
-	ID        string
-	URL       string
-	Filename  string
-	TotalSize int64
-	Status    DownloadStatus
+	ID          string
+	URL         string
+	Filename    string
+	TotalSize   int64
+	Status      DownloadStatus
+	ScheduledAt *time.Time
 }
 
 type ProgressWriter struct {
@@ -79,7 +81,7 @@ type Progress struct {
 }
 
 func (s DownloadStatus) String() string {
-	names := [...]string{"Queued", "Downloading", "Paused", "Completed", "Error"}
+	names := [...]string{"Queued", "Downloading", "Paused", "Completed", "Error", "Scheduled"}
 	if int(s) < 0 || int(s) >= len(names) {
 		return fmt.Sprintf("Undefined(%d)", s)
 	}
@@ -106,6 +108,7 @@ type DownloadRepository interface {
 	CreatePart(part *PartState) error
 	DeletePart(downloadID string) error
 	UpdateFilename(id string, newFilename string) error
+	GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error) 
 }
 
 type TargetInfo struct {

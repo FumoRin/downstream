@@ -61,6 +61,9 @@ var resumeCmd = &cobra.Command{
 			}
 
 			for _, state := range states {
+				if state.Status == downloader.StateScheduled {
+					continue // skip the scheduled one, let it trigger by itself
+				}
 				m.StartDownload(state.ID, state.URL, state.Filename, limiter)
 			}
 		}

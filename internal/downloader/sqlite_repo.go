@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -36,7 +37,8 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 		filename TEXT NOT NULL,
 		total_size INTEGER,
 		status INTEGER,
-		categories TEXT
+		categories TEXT,
+		scheduled_at INTEGER
 	);
 	`
 
@@ -82,16 +84,22 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 }
 
 func (r *SQLiteRepository) SaveDownload(state *DownloadState) error {
+	var scheduledUnix sql.NullInt64
+	if state.ScheduledAt  != nil {
+		scheduledUnix = sql.NullInt64{Int64: state.ScheduledAt.Unix(), Valid: true}
+	}
+
 	query := `
-	INSERT INTO download_metadata (id, url, filename, total_size, status)
-	VALUES (?, ?, ?, ?, ?)
+	INSERT INTO download_metadata (id, url, filename, total_size, status, scheduled_at)
+	VALUES (?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET 
 		url = excluded.url,
 		filename = excluded.filename,
 		total_size = excluded.total_size,
-		status = excluded.status;
+		status = excluded.status,
+		scheduled_at = excluded.scheduled_at;
 	`
-	_, err := r.db.Exec(query, state.ID, state.URL, state.Filename, state.TotalSize, state.Status)
+	_, err := r.db.Exec(query, state.ID, state.URL, state.Filename, state.TotalSize, state.Status, scheduledUnix)
 	if err != nil {
 		return err
 	}
@@ -102,8 +110,9 @@ func (r *SQLiteRepository) SaveDownload(state *DownloadState) error {
 func (r *SQLiteRepository) GetDownload(id string) (*DownloadState, error) {
 	state := &DownloadState{}
 	var status int
+	var scheduledUnix sql.NullInt64
 
-	err := r.db.QueryRow("SELECT id, url, filename, total_size, status FROM download_metadata WHERE id = ?", id).Scan(&state.ID, &state.URL, &state.Filename, &state.TotalSize, &status)
+	err := r.db.QueryRow("SELECT id, url, filename, total_size, status, scheduled_at FROM download_metadata WHERE id = ?", id).Scan(&state.ID, &state.URL, &state.Filename, &state.TotalSize, &status, &scheduledUnix)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -112,6 +121,10 @@ func (r *SQLiteRepository) GetDownload(id string) (*DownloadState, error) {
 	}
 
 	state.Status = DownloadStatus(status)
+	if scheduledUnix.Valid {
+		t := time.Unix(scheduledUnix.Int64, 0)
+		state.ScheduledAt = &t
+	}
 	return state, nil
 }
 
@@ -120,17 +133,22 @@ func scanDownloadRows(rows *sql.Rows) ([]*DownloadState, error) {
 	for rows.Next() {
 		s := &DownloadState{}
 		var status int
-		if err := rows.Scan(&s.ID, &s.URL, &s.Filename, &s.TotalSize, &status); err != nil {
+		var scheduledUnix sql.NullInt64
+		if err := rows.Scan(&s.ID, &s.URL, &s.Filename, &s.TotalSize, &status, &scheduledUnix); err != nil {
 			return nil, err
 		}
 		s.Status = DownloadStatus(status)
+		if scheduledUnix.Valid {
+			t := time.Unix(scheduledUnix.Int64, 0)
+			s.ScheduledAt = &t
+		}
 		states = append(states, s)
 	}
 	return states, rows.Err()
 }
 
 func (r *SQLiteRepository) GetIncompleteDownload() ([]*DownloadState, error) {
-	rows, err := r.db.Query("SELECT id, url, filename, total_size, status FROM download_metadata WHERE status != ?", StateCompleted)
+	rows, err := r.db.Query("SELECT id, url, filename, total_size, status, scheduled_at FROM download_metadata WHERE status != ?", StateCompleted)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +161,7 @@ func (r *SQLiteRepository) GetIncompleteDownload() ([]*DownloadState, error) {
 }
 
 func (r *SQLiteRepository) GetAllDownloads() ([]*DownloadState, error) {
-	rows, err := r.db.Query("SELECT id, url, filename, total_size, status FROM download_metadata")
+	rows, err := r.db.Query("SELECT id, url, filename, total_size, status, scheduled_at FROM download_metadata")
 	if err != nil {
 		return nil, err
 	}
@@ -363,4 +381,22 @@ func (r *SQLiteRepository) GetCategories() ([]*Category, error) {
 	}
 
 	return categories, nil
+}
+
+func (r *SQLiteRepository) GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error) {
+	query := `
+	SELECT id, url, filename, total_size, status, scheduled_at
+	FROM download_metadata
+	WHERE status = ? AND scheduled_at IS NOT NULL AND scheduled_at <= ?
+	`
+
+	rows, err := r.db.Query(query, StateScheduled, now.Unix())
+	if err != nil {
+		return nil, err
+	}
+	defer func()  {
+		_ = rows.Close()
+	}()
+
+	return scanDownloadRows(rows)
 }

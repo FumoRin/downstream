@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fumorin/gdl-manager/internal/downloader"
 	"github.com/spf13/cobra"
@@ -24,7 +25,7 @@ var rootCmd = &cobra.Command{
 		var dbPath string
 		if err == nil {
 			gdlDir := filepath.Join(dir, "gdl")
-			_ = os.MkdirAll(gdlDir, 0755)
+			_ = os.MkdirAll(gdlDir, 0o755)
 			dbPath = filepath.Join(gdlDir, "gdl.db")
 		} else {
 			dbPath = "gdl.db"
@@ -37,6 +38,7 @@ var rootCmd = &cobra.Command{
 		settings, _ := repo.GetAllSettings()
 		app.Manager = downloader.NewDownloadManager(repo, settings)
 		app.Manager.StartWorker(settings.MaxConcurrencyDownload)
+		app.Manager.StartScheduler(1 * time.Second)
 
 		return nil
 	},

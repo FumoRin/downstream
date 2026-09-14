@@ -61,7 +61,7 @@ func TestDownloadManagerStop(t *testing.T) {
 	}))
 	defer server.Close()
 
-	tempDir := os.TempDir()
+	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 	repo, err := NewSQLiteRepository(dbPath)
 	if err != nil {
@@ -102,7 +102,7 @@ func TestDownloadManagerStop(t *testing.T) {
 }
 
 func TestDownloadManagerDelete(t *testing.T) {
-	tempDir := os.TempDir()
+	tempDir := t.TempDir()
 	dbPath := filepath.Join(tempDir, "test.db")
 	repo, err := NewSQLiteRepository(dbPath)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -103,7 +104,7 @@ func ParseRateLimit(s string) (int64, error) {
 	}
 
 	multiplier := int64(1)
-	if strings.HasSuffix(s, "M") || strings.HasSuffix(s, "KB") {
+	if strings.HasSuffix(s, "K") || strings.HasSuffix(s, "KB") {
 		multiplier = 1024
 		s = strings.TrimSuffix(strings.TrimSuffix(s, "B"), "K")
 	} else if strings.HasSuffix(s, "M") || strings.HasSuffix(s, "MB") {
@@ -120,4 +121,50 @@ func ParseRateLimit(s string) (int64, error) {
 	}
 
 	return val * multiplier, nil
+}
+
+func ParseScheduleTime(atStr, inStr string, now time.Time) (*time.Time, error) {
+	if atStr != "" && inStr != "" {
+		return nil, fmt.Errorf("cannot use both --at and --in flags simultaneously")
+	}
+	if atStr == "" && inStr == "" {
+		return nil, nil
+	}
+
+	// 1. Relative duration: --in "30m", "2h"
+	if inStr != "" {
+		dur, err := time.ParseDuration(inStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid duration format '%s': %w", inStr, err)
+		}
+		t := now.Add(dur)
+		return &t, nil
+	}
+
+	// 2. Absolute time: --at "15:04" or "2006-01-02 15:04"
+	if t, err := time.ParseInLocation("2006-01-02 15:04", atStr, now.Location()); err == nil {
+		return &t, nil
+	}
+
+	// Try time-only format: "15:04"
+	if t, err := time.ParseInLocation("15:04", atStr, now.Location()); err == nil {
+		target := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
+		if target.Before(now) {
+			target = target.Add(24 * time.Hour)
+		}
+		return &target, nil
+	}
+
+	return nil, fmt.Errorf("invalid time format '%s' (use '15:04' or '2006-01-02 15:04')", atStr)
+}
+
+func FallbackFilenameFromURL(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err == nil && parsed.Path != "" {
+		base := filepath.Base(parsed.Path)
+		if base != "" && base != "." && base != "/" {
+			return filepath.Base(base)
+		}
+	}
+	return "download"
 }

@@ -90,3 +90,47 @@ func TestParseTotalSize(t *testing.T) {
 		t.Errorf("expected 0 for empty string, got %d", size)
 	}
 }
+
+func TestParseRateLimit(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expected    int64
+		expectError bool
+	}{
+		{"Empty string", "", 0, false},
+		{"Zero", "0", 0, false},
+		{"Unlimited lowercase", "unlimited", 0, false},
+		{"Unlimited uppercase", "UNLIMITED", 0, false},
+		{"Raw bytes", "2048", 2048, false},
+		{"Kilobytes single letter", "500K", 500 * 1024, false},
+		{"Kilobytes two letters", "500KB", 500 * 1024, false},
+		{"Kilobytes lowercase", "500kb", 500 * 1024, false},
+		{"Megabytes single letter", "2M", 2 * 1024 * 1024, false},
+		{"Megabytes two letters", "2MB", 2 * 1024 * 1024, false},
+		{"Megabytes lowercase", "2mb", 2 * 1024 * 1024, false},
+		{"Gigabytes single letter", "1G", 1 * 1024 * 1024 * 1024, false},
+		{"Gigabytes two letters", "1GB", 1 * 1024 * 1024 * 1024, false},
+		{"Whitespace around", "  500K  ", 500 * 1024, false},
+		{"Invalid text", "invalid", 0, true},
+		{"Invalid unit format", "500MB/s", 0, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ParseRateLimit(tc.input)
+			if tc.expectError {
+				if err == nil {
+					t.Errorf("ParseRateLimit(%q) expected error, got nil", tc.input)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ParseRateLimit(%q) unexpected error: %v", tc.input, err)
+			}
+			if got != tc.expected {
+				t.Errorf("ParseRateLimit(%q) = %d, expected %d", tc.input, got, tc.expected)
+			}
+		})
+	}
+}

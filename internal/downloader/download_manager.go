@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -221,7 +223,74 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 	cancel()
 }
 
+func (m *DownloadManager) ScheduleDownload(id, url, customFilename string, ctx context.Context, scheduledAt time.Time, limiters ...*rate.Limiter) (*TargetInfo, error) {
+	info, err := m.Probe(ctx, url, customFilename)
+	resolvedFilename := customFilename
+	var totalSize int64
+	if err == nil && info != nil {
+		resolvedFilename = info.Filename
+		totalSize = info.TotalSize
+	} else {
+		if resolvedFilename == "" {
+			resolvedFilename = FallbackFilenameFromURL(url)
+		}
+	}
 
+	state := &DownloadState{
+		ID: id,
+		URL: url,
+		Filename: resolvedFilename,
+		TotalSize: totalSize,
+		Status: StateScheduled,
+		ScheduledAt: &scheduledAt,
+	}
+
+	if saveErr := m.repo.SaveDownload(state); saveErr != nil {
+		return nil, saveErr
+	}
+
+	return info, err
+}
+
+func (m *DownloadManager) StartScheduler(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-m.ctx.Done():
+				return 
+			case <-ticker.C:
+				m.checkScheduledDownloads()
+			}
+		}
+	}()
+}
+
+func (m *DownloadManager) checkScheduledDownloads() {
+	due, err := m.repo.GetDueScheduledDownloads(time.Now())
+	if err != nil || len(due) == 0 {
+		return 
+	}
+
+	for _, item := range due {
+		m.StartDownload(item.ID, item.URL, item.Filename, nil)
+	}
+}
+
+func (m *DownloadManager) Probe(ctx context.Context, url, customFilename string) (*TargetInfo, error) {
+	opts := DownloadOptions{
+		Filename: customFilename,
+		Settings: m.settings,
+	}
+
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	return probeServerSupport(ctx, client, url, opts)
+}
 
 
 // === Public API & Lifecycle ===
