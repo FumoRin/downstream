@@ -73,7 +73,8 @@ func singlepartDownload(id string, url string, info *TargetInfo, opts DownloadOp
 		}
 
 		buf := make([]byte, 32*1024)
-		_, copyErr := io.CopyBuffer(pw, resp.Body, buf)
+		throttleBody := NewThrottledReader(ctx, resp.Body, opts.Limiter)
+		_, copyErr := io.CopyBuffer(pw, throttleBody, buf)
 		_ = resp.Body.Close()
 		_ = file.Close()
 

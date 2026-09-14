@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 func CreateTestRangeServer(t *testing.T, payload []byte) *httptest.Server {
@@ -288,7 +290,7 @@ func TestGetUniqueFilename(t *testing.T) {
 func TestMultiPartRetryWhenConnectionDrop(t *testing.T) {
 	payload := make([]byte, 6*1024*1024)
 	_, _ = rand.Read(payload)
-	
+
 	var requestCount atomic.Int32
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -319,16 +321,16 @@ func TestMultiPartRetryWhenConnectionDrop(t *testing.T) {
 
 	opts := DownloadOptions{
 		Filename: "retry_test.bin",
-		Repo: repo,
+		Repo:     repo,
 		Progress: make(chan Progress, 100),
 	}
 
 	_ = repo.SaveDownload(&DownloadState{
-		ID: "job-retry",
-		URL: server.URL,
-		Filename: "retry_test.bin",
+		ID:        "job-retry",
+		URL:       server.URL,
+		Filename:  "retry_test.bin",
 		TotalSize: int64(len(payload)),
-		Status: StateDownloading,
+		Status:    StateDownloading,
 	})
 
 	totalSize, finalFilename, err := Download("job-retry", server.URL, opts, context.Background())
@@ -344,7 +346,36 @@ func TestMultiPartRetryWhenConnectionDrop(t *testing.T) {
 	if !bytes.Equal(downloaded, payload) {
 		t.Errorf("downloaded file corrupted after recovery")
 	}
+}
 
+func TestRateLimiter(t *testing.T) {
+	payload := make([]byte, 250*1024) // 200 KB
+	server := CreateTestRangeServer(t, payload)
 
+	tempDir := t.TempDir()
+	originalWd, _ := os.Getwd()
+	_ = os.Chdir(tempDir)
+	defer func() {
+		_ = os.Chdir(originalWd)
+	}()
 
+	// Limit to 100 KB/s (so 200 KB should take ~2 seconds)
+	limiter := rate.NewLimiter(rate.Limit(100*1024), 32*1024)
+
+	opts := DownloadOptions{
+		Filename: "throttled.bin",
+		Limiter:  limiter,
+		Progress: make(chan Progress, 100),
+	}
+
+	start := time.Now()
+	_, _, err := Download("job-rate", server.URL, opts, context.Background())
+	if err != nil {
+		t.Fatalf("download failed: %v", err)
+	}
+
+	elapsed := time.Since(start)
+	if elapsed < 1800*time.Millisecond {
+		t.Errorf("download finished too fast (%v), rate limiter failed", elapsed)
+	}
 }

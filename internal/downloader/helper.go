@@ -181,3 +181,29 @@ func ResolveDestination(filename string, categories []*Category, defaultDir stri
 	_ = os.MkdirAll(defaultDir, 0o755)
 	return filepath.Join(defaultDir, filename), "General"
 }
+
+func ParseRateLimit(s string) (int64, error) {
+	s = strings.TrimSpace(strings.ToUpper(s))
+	if s == "" || s == "0" || s == "UNLIMITED" {
+		return 0, nil
+	}
+
+	multiplier := int64(1)
+	if strings.HasSuffix(s, "M") || strings.HasSuffix(s, "KB") {
+		multiplier = 1024
+		s = strings.TrimSuffix(strings.TrimSuffix(s, "B"), "K")
+	} else if strings.HasSuffix(s, "M") || strings.HasSuffix(s, "MB") {
+		multiplier = 1024 * 1024
+		s = strings.TrimSuffix(strings.TrimSuffix(s, "B"), "M")
+	} else if strings.HasSuffix(s, "G") || strings.HasSuffix(s, "GB") {
+		multiplier = 1024 * 1024 * 1024
+		s = strings.TrimSuffix(strings.TrimSuffix(s, "B"), "G")
+	}
+
+	val, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid rate limit `%s`: %w", s, err)
+	}
+
+	return val * multiplier, nil 
+}

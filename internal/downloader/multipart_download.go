@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/time/rate"
 )
 
 func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOptions, ctx context.Context) (int64, string, error) {
@@ -60,7 +61,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 		go func(p *PartState) {
 			defer wg.Done()
 
-			if err := downloadParts(workerCtx, client, url, file, p, opts.Repo, &totalDownload); err != nil {
+			if err := downloadParts(workerCtx, client, url, file, p, opts.Repo, &totalDownload, opts.Limiter); err != nil {
 				select {
 				case errChan <- err:
 				default:
@@ -206,6 +207,7 @@ func downloadParts(
 	part *PartState,
 	repo DownloadRepository,
 	totalDownloaded *atomic.Int64,
+	limiter *rate.Limiter,
 ) error {
 	if part.StartByte+part.CurrentByte > part.EndByte {
 		return nil
@@ -213,7 +215,7 @@ func downloadParts(
 
 	var lastErr error
 	for attempt := range defaultMaxRetries {
-		lastErr = downloadPartAttempt(ctx, client, url, file, part, repo, totalDownloaded)
+		lastErr = downloadPartAttempt(ctx, client, url, file, part, repo, totalDownloaded, limiter)
 		if lastErr == nil {
 			return nil
 		}
@@ -241,6 +243,7 @@ func downloadPartAttempt(
 	part *PartState,
 	repo DownloadRepository,
 	totalDownloaded *atomic.Int64,
+	limiter *rate.Limiter,
 ) error {
 	reqStart := part.StartByte + part.CurrentByte
 	if reqStart > part.EndByte {
@@ -265,6 +268,7 @@ func downloadPartAttempt(
 		return fmt.Errorf("unexpected status: %d (expected 206 Partial Content)", resp.StatusCode)
 	}
 
+	throttleBody := NewThrottledReader(ctx, resp.Body, limiter)
 	buf := make([]byte, 32*1024)
 	lastPersist := time.Now()
 	for {
@@ -276,7 +280,7 @@ func downloadPartAttempt(
 			return ctx.Err()
 		default:
 		}
-		n, readErr := resp.Body.Read(buf)
+		n, readErr := throttleBody.Read(buf)
 		if n > 0 {
 			offset := part.StartByte + part.CurrentByte
 			if _, err := file.WriteAt(buf[:n], offset); err != nil {

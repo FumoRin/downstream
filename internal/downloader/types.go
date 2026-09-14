@@ -6,6 +6,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type DownloadStatus int
@@ -25,12 +27,14 @@ type DownloadOptions struct {
 	Progress chan Progress
 	Repo     DownloadRepository
 	Settings *Settings
+	Limiter  *rate.Limiter
 }
 
 type DownloadJob struct {
 	ID       string
 	URL      string
 	Filename string
+	Limiter  *rate.Limiter
 }
 
 type DownloadManager struct {

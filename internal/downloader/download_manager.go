@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+
+	"golang.org/x/time/rate"
 )
 
 // StartWorker Start a download worker for each job
@@ -23,7 +25,12 @@ func (m *DownloadManager) StartWorker(count int) {
 }
 
 // StartDownload Start a Download
-func (m *DownloadManager) StartDownload(generatedID string, url string, filename string) {
+func (m *DownloadManager) StartDownload(generatedID string, url string, filename string, limiters ...*rate.Limiter) {
+	var limiter *rate.Limiter
+	if len(limiters) > 0 {
+		limiter = limiters[0]
+	}
+
 	state, err := m.repo.GetDownload(generatedID)
 	if err != nil || state == nil {
 		state = &DownloadState{
@@ -51,7 +58,7 @@ func (m *DownloadManager) StartDownload(generatedID string, url string, filename
 		m.wg.Done()
 		return
 
-	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename}:
+	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Limiter: limiter}:
 		return
 	}
 }
@@ -171,6 +178,7 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 		Progress: m.progress,
 		Repo:     m.repo,
 		Settings: m.settings,
+		Limiter:  job.Limiter,
 	}
 
 	totalSize, filename, downloadErr := Download(job.ID, job.URL, opts, ctx)
