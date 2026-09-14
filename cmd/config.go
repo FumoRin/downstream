@@ -31,7 +31,7 @@ var configListCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		_, _ = fmt.Fprintf(w, "KEY\nVALUE")
+		_, _ = fmt.Fprintf(w, "KEY\tVALUE\n")
 		_, _ = fmt.Fprintf(w, "download_dir\t%s\n", settings.DownloadDir)
 		_, _ = fmt.Fprintf(w, "max_concurrent_download\t%d\n", settings.MaxConcurrencyDownload)
 		_, _ = fmt.Fprintf(w, "per_part_download\t%d\n", settings.PartsPerDownload)

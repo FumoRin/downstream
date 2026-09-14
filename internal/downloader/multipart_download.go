@@ -34,7 +34,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 		return 0, "", fmt.Errorf("failed to truncate file: %w", err)
 	}
 
-	parts, err := getOsPartHelper(id, totalSize, concurrency, opts.Repo)
+	parts, err := getOrPartHelper(id, totalSize, concurrency, opts.Repo)
 	if err != nil {
 		return 0, "", fmt.Errorf("failed to initialize parts: %w", err)
 	}
@@ -110,7 +110,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 	return totalSize, finalFilename, nil
 }
 
-func getOsPartHelper(downloadID string, totalSize int64, numParts int, repo DownloadRepository) ([]*PartState, error) {
+func getOrPartHelper(downloadID string, totalSize int64, numParts int, repo DownloadRepository) ([]*PartState, error) {
 	if repo != nil {
 		existing, err := repo.GetParts(downloadID)
 		if err == nil && len(existing) > 0 {
