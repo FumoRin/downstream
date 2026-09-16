@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "gdl-manager",
+  "outputfilename": "gdl-manager",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm run build",
+  "frontend:dev:watcher": "pnpm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "build:tags": "webkit2_41",
+  "author": {
+    "name": "FumoRin"
+  }
+}

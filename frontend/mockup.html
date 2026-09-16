@@ -1,0 +1,2091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GDL Manager - UI Mockup</title>
+  <style>
+    /* =========================================================
+       GDL Manager Theme (Catppuccin Mocha / Slate Dark)
+       Optimized for Wails v2 + Svelte 5 Desktop App
+       ========================================================= */
+    :root {
+      --bg-base: #1e1e2e;
+      --bg-mantle: #181825;
+      --bg-crust: #11111b;
+      --bg-surface0: #313244;
+      --bg-surface1: #45475a;
+      --bg-surface2: #585b70;
+      
+      --text-main: #cdd6f4;
+      --text-sub: #a6adc8;
+      --text-muted: #6c7086;
+      
+      --accent-blue: #89b4fa;
+      --accent-lavender: #b4befe;
+      --accent-green: #a6e3a1;
+      --accent-peach: #fab387;
+      --accent-yellow: #f9e2af;
+      --accent-red: #f38ba8;
+      --accent-mauve: #cba6f7;
+      --accent-teal: #94e2d5;
+
+      --border-color: #313244;
+      --border-subtle: #262738;
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 10px;
+      --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--bg-base);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+    }
+
+    /* Top Titlebar / App Navigation */
+    header.app-header {
+      background: var(--bg-crust);
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+    }
+
+    .brand-icon {
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-mauve));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--bg-crust);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      background: var(--bg-surface0);
+      color: var(--accent-lavender);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: normal;
+    }
+
+    /* Toolbar Actions */
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: var(--bg-surface0);
+      color: var(--text-main);
+    }
+
+    .btn:hover {
+      background: var(--bg-surface1);
+      border-color: var(--accent-blue);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: var(--bg-crust);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-lavender);
+      color: var(--bg-crust);
+    }
+
+    .btn-icon {
+      padding: 6px 8px;
+    }
+
+    .btn-danger {
+      color: var(--accent-red);
+    }
+    .btn-danger:hover {
+      background: rgba(243, 139, 168, 0.15);
+      border-color: var(--accent-red);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-mantle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 4px 10px;
+      gap: 6px;
+      width: 220px;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 12px;
+      width: 100%;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Main Workspace Layout */
+    .app-workspace {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: 220px;
+      background: var(--bg-mantle);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Mode Switcher Tabs */
+    .mode-tabs {
+      display: flex;
+      padding: 10px 12px 6px;
+      gap: 4px;
+      background: var(--bg-crust);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .mode-tab-btn {
+      flex: 1;
+      padding: 6px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-tab-btn.active {
+      background: var(--bg-surface0);
+      color: var(--accent-blue);
+      border-color: var(--border-color);
+    }
+
+    .mode-tab-btn:hover:not(.active) {
+      color: var(--text-main);
+    }
+
+    .nav-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+
+    .nav-group-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      padding: 8px 8px 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      color: var(--text-sub);
+      cursor: pointer;
+      font-size: 12px;
+      margin-bottom: 2px;
+      transition: all 0.12s ease;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-surface0);
+      color: var(--text-main);
+    }
+
+    .nav-item.active {
+      background: rgba(137, 180, 250, 0.15);
+      color: var(--accent-blue);
+      font-weight: 600;
+    }
+
+    .nav-item-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      background: var(--bg-surface0);
+      border-radius: 10px;
+      color: var(--text-muted);
+    }
+
+    .nav-item.active .nav-badge {
+      background: var(--accent-blue);
+      color: var(--bg-crust);
+      font-weight: 700;
+    }
+
+    /* Main Area with Table and Pinned Panel */
+    .main-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--bg-base);
+    }
+
+    /* Table Container */
+    .table-container {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 140px;
+    }
+
+    table.download-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--bg-crust);
+      color: var(--text-sub);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      z-index: 2;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    tbody tr.selected {
+      background: rgba(137, 180, 250, 0.12) !important;
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    td {
+      padding: 8px 12px;
+      vertical-align: middle;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .col-file {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 280px;
+    }
+
+    .file-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .icon-archive { background: rgba(203, 166, 247, 0.2); color: var(--accent-mauve); }
+    .icon-video { background: rgba(166, 227, 161, 0.2); color: var(--accent-green); }
+    .icon-doc { background: rgba(137, 180, 250, 0.2); color: var(--accent-blue); }
+    .icon-program { background: rgba(250, 179, 135, 0.2); color: var(--accent-peach); }
+    .icon-audio { background: rgba(148, 226, 213, 0.2); color: var(--accent-teal); }
+
+    .file-name-block {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-subtext {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Progress bar in table */
+    .table-progress-box {
+      width: 130px;
+    }
+
+    .progress-track {
+      height: 6px;
+      background: var(--bg-surface0);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .fill-downloading {
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
+    }
+    .fill-paused {
+      background: var(--accent-peach);
+    }
+    .fill-completed {
+      background: var(--accent-green);
+    }
+    .fill-error {
+      background: var(--accent-red);
+    }
+    .fill-scheduled {
+      background: var(--accent-mauve);
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-sub);
+      margin-top: 3px;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-downloading {
+      background: rgba(137, 180, 250, 0.15);
+      color: var(--accent-blue);
+    }
+    .badge-paused {
+      background: rgba(250, 179, 135, 0.15);
+      color: var(--accent-peach);
+    }
+    .badge-completed {
+      background: rgba(166, 227, 161, 0.15);
+      color: var(--accent-green);
+    }
+    .badge-queued {
+      background: rgba(166, 173, 200, 0.15);
+      color: var(--text-sub);
+    }
+    .badge-scheduled {
+      background: rgba(203, 166, 247, 0.15);
+      color: var(--accent-mauve);
+    }
+    .badge-error {
+      background: rgba(243, 139, 168, 0.15);
+      color: var(--accent-red);
+    }
+
+    .badge-pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-row-action {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      transition: all 0.1s;
+    }
+    .btn-row-action:hover {
+      background: var(--bg-surface0);
+      color: var(--text-main);
+    }
+
+    /* =========================================================
+       PINNED DETAILS PANE (Bottom Section, right above status bar)
+       ========================================================= */
+    .details-pane {
+      background: var(--bg-mantle);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 260px;
+      flex-shrink: 0;
+      transition: height 0.2s ease;
+      position: relative;
+    }
+
+    .details-pane.collapsed {
+      height: 38px !important;
+    }
+
+    /* Drag handle / Split bar */
+    .details-resizer {
+      position: absolute;
+      top: -3px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      cursor: row-resize;
+      z-index: 10;
+    }
+
+    .details-resizer:hover {
+      background: var(--accent-blue);
+    }
+
+    /* Pane Header: Left info, Right aligned tabs & toggle */
+    .details-header {
+      height: 38px;
+      background: var(--bg-crust);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .details-title-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .details-title-box .details-filename {
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 360px;
+    }
+
+    /* Right-aligned Header Section for Tabs & Collapse */
+    .details-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+    }
+
+    .details-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+    }
+
+    .details-tab-btn {
+      padding: 0 14px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .details-tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .details-tab-btn.active {
+      color: var(--accent-blue);
+      border-bottom-color: var(--accent-blue);
+      background: rgba(137, 180, 250, 0.05);
+    }
+
+    .details-content {
+      flex: 1;
+      padding: 12px 16px;
+      overflow-y: auto;
+    }
+
+    /* =========================================================
+       TAB 1: General Details with Overall Progress Bar & Inline Buttons
+       ========================================================= */
+    .general-view-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Prominent Overall Progress in General Tab */
+    .general-progress-card {
+      background: var(--bg-crust);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .general-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .general-progress-title {
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .general-progress-stats {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .general-progress-bar-track {
+      height: 8px;
+      background: var(--bg-surface0);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .general-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* General Key-Value Grid */
+    .general-fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 20px;
+      font-size: 12px;
+    }
+
+    .general-field-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .general-label {
+      color: var(--text-muted);
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Inline action group for URL + Copy button, Dir + Open Folder button */
+    .inline-action-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-crust);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      gap: 8px;
+    }
+
+    .inline-text-value {
+      flex: 1;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .inline-text-value.clickable {
+      color: var(--accent-blue);
+      cursor: pointer;
+    }
+    .inline-text-value.clickable:hover {
+      text-decoration: underline;
+    }
+
+    .general-meta-group {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .meta-card {
+      background: var(--bg-crust);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .meta-card-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .meta-card-val {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-main);
+    }
+
+    /* =========================================================
+       TAB 2: Progress & Parts (NO tabs, seamless continuous chunk bar)
+       Contiguous downloaded ranges merge without border gaps!
+       ========================================================= */
+    .progress-tab-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+    }
+
+    .progress-top-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    /* Seamless IDM/aria2-style continuous dynamic segmented container */
+    .seamless-chunk-container {
+      background: var(--bg-crust);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .seamless-chunk-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    /* The Continuous Segmented Track: NO BORDER between parts! */
+    .seamless-bar-track {
+      position: relative;
+      width: 100%;
+      height: 24px;
+      background: var(--bg-surface0);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      /* Workers are assigned dynamically, slices sit seamlessly side-by-side */
+    }
+
+    /* Contiguous downloaded block */
+    .seamless-part-slice {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-teal));
+      /* NO border or margin! Contiguous parts merge into one smooth continuous fill */
+      border: none;
+      margin: 0;
+      padding: 0;
+      transition: width 0.2s linear, left 0.2s linear;
+    }
+
+    .seamless-part-slice.completed {
+      background: var(--accent-green);
+    }
+
+    /* Active worker download head (white pulse line at current offset) */
+    .seamless-part-slice.active::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #ffffff;
+      box-shadow: 0 0 6px #ffffff;
+    }
+
+    .chunk-legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .legend-indicators {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .legend-dot-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    /* Real-Time Speed Graph (Canvas/SVG Chart) */
+    .speed-graph-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .speed-graph-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .speed-canvas-container {
+      background: var(--bg-crust);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      height: 75px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas#speedCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* =========================================================
+       STATUS BAR (Bottom section)
+       Session usage & Storage Capacity available/total
+       ========================================================= */
+    footer.app-statusbar {
+      background: var(--bg-crust);
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-top: 1px solid var(--border-color);
+      font-size: 11px;
+      color: var(--text-sub);
+      flex-shrink: 0;
+    }
+
+    .statusbar-left,
+    .statusbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-weight: 600;
+      color: var(--text-main);
+      font-family: monospace;
+    }
+
+    .stat-badge-speed {
+      color: var(--accent-green);
+    }
+
+    /* Disk storage meter */
+    .storage-meter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .storage-bar-track {
+      width: 80px;
+      height: 6px;
+      background: var(--bg-surface0);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .storage-bar-fill {
+      height: 100%;
+      width: 58%;
+      background: var(--accent-lavender);
+      border-radius: 3px;
+    }
+
+    /* Modal for Add URL */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      visibility: hidden;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .modal-box {
+      background: var(--bg-mantle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      width: 500px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 12px 16px;
+      background: var(--bg-crust);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .modal-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+
+    .form-input {
+      background: var(--bg-surface0);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 8px 10px;
+      color: var(--text-main);
+      font-size: 12px;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .modal-footer {
+      padding: 12px 16px;
+      background: var(--bg-crust);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .badge-cat {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-surface0);
+      color: var(--text-sub);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation / Toolbar -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">G</div>
+      <span>GDL Manager</span>
+      <span class="brand-badge">Wails Desktop</span>
+    </div>
+
+    <div class="toolbar-actions">
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Add URL
+      </button>
+
+      <button class="btn btn-icon" title="Resume Selected" onclick="resumeSelected()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </button>
+
+      <button class="btn btn-icon" title="Pause Selected" onclick="pauseSelected()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+
+      <button class="btn btn-icon btn-danger" title="Delete Download" onclick="deleteSelected()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+
+      <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 4px;"></div>
+
+      <!-- Rate Limiting Quick Toggle -->
+      <button class="btn" id="speedLimitBtn" onclick="toggleRateLimit()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span id="speedLimitLabel">Limit: Unlimited</span>
+      </button>
+
+      <!-- Search / Filter -->
+      <div class="search-box">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search downloads..." oninput="handleSearch(this.value)" />
+      </div>
+
+      <button class="btn btn-icon" title="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Viewport (Sidebar + Downloads Area) -->
+  <div class="app-workspace">
+    
+    <!-- Left Navigation Sidebar with 2 Viewing Modes -->
+    <aside class="sidebar">
+      <!-- Mode Switcher Tabs -->
+      <div class="mode-tabs">
+        <button class="mode-tab-btn active" id="modeStatusBtn" onclick="switchSidebarMode('status')">
+          All Status
+        </button>
+        <button class="mode-tab-btn" id="modeCategoryBtn" onclick="switchSidebarMode('category')">
+          Categories
+        </button>
+      </div>
+
+      <div class="nav-content">
+        <!-- MODE 1: All Downloads & Status Filter -->
+        <div id="statusNavGroup">
+          <div class="nav-group-title">Status Filters</div>
+          
+          <div class="nav-item active" onclick="filterByStatus('all', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>All Downloads</span>
+            </div>
+            <span class="nav-badge" id="countAll">6</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByStatus('downloading', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><polyline points="7 13 12 18 17 13"/><line x1="12" y1="6" x2="12" y2="18"/></svg>
+              <span>Downloading</span>
+            </div>
+            <span class="nav-badge" id="countDownloading">2</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByStatus('queued', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-sub)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Queued</span>
+            </div>
+            <span class="nav-badge" id="countQueued">1</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByStatus('paused', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-peach)" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              <span>Paused</span>
+            </div>
+            <span class="nav-badge" id="countPaused">1</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByStatus('completed', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Completed</span>
+            </div>
+            <span class="nav-badge" id="countCompleted">1</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByStatus('scheduled', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mauve)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Scheduled</span>
+            </div>
+            <span class="nav-badge" id="countScheduled">1</span>
+          </div>
+        </div>
+
+        <!-- MODE 2: Category-Based Viewing (Filetype Grouping) -->
+        <div id="categoryNavGroup" style="display: none;">
+          <div class="nav-group-title">File Categories</div>
+
+          <div class="nav-item active" onclick="filterByCategory('all', this)">
+            <div class="nav-item-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>All Categories</span>
+            </div>
+            <span class="nav-badge">6</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByCategory('Compressed', this)">
+            <div class="nav-item-left">
+              <span class="file-icon icon-archive" style="width:18px;height:18px;font-size:9px;">ZIP</span>
+              <span>Compressed</span>
+            </div>
+            <span class="nav-badge">2</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByCategory('Video', this)">
+            <div class="nav-item-left">
+              <span class="file-icon icon-video" style="width:18px;height:18px;font-size:9px;">MP4</span>
+              <span>Videos</span>
+            </div>
+            <span class="nav-badge">1</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByCategory('Documents', this)">
+            <div class="nav-item-left">
+              <span class="file-icon icon-doc" style="width:18px;height:18px;font-size:9px;">PDF</span>
+              <span>Documents</span>
+            </div>
+            <span class="nav-badge">1</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByCategory('Programs', this)">
+            <div class="nav-item-left">
+              <span class="file-icon icon-program" style="width:18px;height:18px;font-size:9px;">ISO</span>
+              <span>Programs & ISO</span>
+            </div>
+            <span class="nav-badge">1</span>
+          </div>
+
+          <div class="nav-item" onclick="filterByCategory('Audio', this)">
+            <div class="nav-item-left">
+              <span class="file-icon icon-audio" style="width:18px;height:18px;font-size:9px;">MP3</span>
+              <span>Audio</span>
+            </div>
+            <span class="nav-badge">1</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport: Downloads Table & Pinned Inspector -->
+    <main class="main-viewport">
+      
+      <!-- Downloads Data Table -->
+      <div class="table-container">
+        <table class="download-table">
+          <thead>
+            <tr>
+              <th style="width: 34px;">#</th>
+              <th>Filename</th>
+              <th>Category</th>
+              <th>Size</th>
+              <th>Progress</th>
+              <th>Speed</th>
+              <th>ETA</th>
+              <th>Status</th>
+              <th style="width: 70px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="downloadsTableBody">
+            <!-- Table Rows dynamically injected by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PINNED DOWNLOAD DETAILS SECTION (Right above status bar) -->
+      <section class="details-pane" id="detailsPane">
+        <!-- Resizer handle -->
+        <div class="details-resizer" id="resizer"></div>
+
+        <!-- Details Header: Left info, Right-aligned Tabs & Collapse Button -->
+        <div class="details-header">
+          <div class="details-title-box">
+            <span id="detailIcon" class="file-icon icon-program">ISO</span>
+            <div class="details-filename" id="detailFilename">Fedora-Workstation-Live-40.iso</div>
+            <span id="detailBadge" class="status-badge badge-downloading">Downloading</span>
+          </div>
+
+          <!-- Align details & progress buttons to the right -->
+          <div class="details-header-right">
+            <div class="details-tabs">
+              <button class="details-tab-btn active" id="tabBtnGeneral" onclick="switchDetailTab('general')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                General Details
+              </button>
+              <button class="details-tab-btn" id="tabBtnProgress" onclick="switchDetailTab('progress')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Progress & Parts
+              </button>
+            </div>
+
+            <button class="btn btn-icon" id="toggleCollapseBtn" title="Collapse / Expand" onclick="toggleDetailsCollapse()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Details Tab Contents -->
+        <div class="details-content" id="detailsContent">
+          
+          <!-- TAB 1: General Details (includes Overall Progress & inline Copy/Open buttons) -->
+          <div id="tabContentGeneral" class="general-view-container">
+            
+            <!-- Overall Progress Bar Card in General Tab -->
+            <div class="general-progress-card">
+              <div class="general-progress-header">
+                <div class="general-progress-title">
+                  <span>Overall Download Progress</span>
+                  <span id="genOverallPct" style="color: var(--accent-blue);">63.0%</span>
+                </div>
+                <div class="general-progress-stats" id="genOverallStats">
+                  1.48 GB / 2.35 GB • 8.42 MB/s • ETA: 01:45
+                </div>
+              </div>
+              <div class="general-progress-bar-track">
+                <div class="general-progress-bar-fill" id="genProgressBarFill" style="width: 63%;"></div>
+              </div>
+            </div>
+
+            <!-- Fields Grid: Original Link + Copy button, Save Directory + Open Folder button -->
+            <div class="general-fields-grid">
+              <!-- Link + Copy -->
+              <div class="general-field-row">
+                <span class="general-label">Original Link</span>
+                <div class="inline-action-box">
+                  <span class="inline-text-value clickable" id="valUrl" onclick="copyActiveUrl()" title="Click to copy">https://download.fedoraproject.org/pub/fedora/linux/releases/40/Workstation/x86_64/iso/Fedora-Workstation-Live-x86_64-40-1.14.iso</span>
+                  <button class="btn btn-sm" onclick="copyActiveUrl()" title="Copy Link to Clipboard">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <!-- Save Dir + Open Folder -->
+              <div class="general-field-row">
+                <span class="general-label">Save Directory</span>
+                <div class="inline-action-box">
+                  <span class="inline-text-value" id="valDir">/home/eriya/Downloads/Programs/</span>
+                  <button class="btn btn-sm" onclick="openActiveFolder()" title="Open Destination Folder">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Open
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Meta attributes -->
+            <div class="general-meta-group">
+              <div class="meta-card">
+                <span class="meta-card-label">Multi-Part Status</span>
+                <span class="meta-card-val" id="valMultipart" style="color: var(--accent-green);">Supported (8 dynamic parts)</span>
+              </div>
+              <div class="meta-card">
+                <span class="meta-card-label">Date Added / Scheduling</span>
+                <span class="meta-card-val" id="valDate">Today at 16:42 • Direct</span>
+              </div>
+              <div class="meta-card">
+                <span class="meta-card-label">File Category & State</span>
+                <span class="meta-card-val" id="valCategoryState">Programs • Downloading</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TAB 2: Progress & Parts (Seamless Continuous Bar, NO sub-tabs, NO detailed parts list) -->
+          <div id="tabContentProgress" style="display: none;" class="progress-tab-wrapper">
+            
+            <div class="progress-top-info">
+              <div>
+                <span>Concurrent Connections: <strong id="progActivePartsCount" style="color: var(--accent-teal);">8 Workers</strong> (Dynamic Chunk Allocation)</span>
+              </div>
+              <div>
+                <span>Aggregate Transfer Speed: <strong id="progSpeedLabel" style="color: var(--accent-green);">8.42 MB/s</strong></span>
+              </div>
+            </div>
+
+            <!-- Seamless IDM/FDM Style Segmented Map (No borders between parts) -->
+            <div class="seamless-chunk-container">
+              <div class="seamless-chunk-header">
+                <span>Dynamic Byte Map Allocation (0% &rarr; 100%)</span>
+                <span id="progByteStats">Downloaded 1.48 GB of 2.35 GB</span>
+              </div>
+
+              <!-- Continuous track without internal borders -->
+              <div class="seamless-bar-track" id="seamlessBarTrack">
+                <!-- Seamless contiguous slices dynamically injected by JS -->
+              </div>
+
+              <div class="chunk-legend-row">
+                <div class="legend-indicators">
+                  <div class="legend-dot-item">
+                    <div class="legend-dot" style="background: var(--accent-green);"></div>
+                    <span>Finished Chunks</span>
+                  </div>
+                  <div class="legend-dot-item">
+                    <div class="legend-dot" style="background: var(--accent-blue);"></div>
+                    <span>Active Chunks</span>
+                  </div>
+                  <div class="legend-dot-item">
+                    <div class="legend-dot" style="background: var(--bg-surface0); border: 1px solid var(--border-color);"></div>
+                    <span>Unallocated / Pending</span>
+                  </div>
+                </div>
+                <span>Byte 0 &rarr; Byte End (Workers dynamically split pending ranges)</span>
+              </div>
+            </div>
+
+            <!-- Real-Time Download Speed Graph (Canvas) -->
+            <div class="speed-graph-section">
+              <div class="speed-graph-header">
+                <span>Real-Time Speed Graph (Last 60s)</span>
+                <span>Peak: <span id="peakSpeedLabel" style="color: var(--accent-blue);">12.50 MB/s</span> | Current: <span id="currSpeedLabel" style="color: var(--accent-green);">8.42 MB/s</span></span>
+              </div>
+              <div class="speed-canvas-container">
+                <canvas id="speedCanvas" width="900" height="75"></canvas>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Bottom Session Usage & Storage Capacity Bar -->
+  <footer class="app-statusbar">
+    <div class="statusbar-left">
+      <!-- Session Bandwidth Usage -->
+      <div class="stat-item">
+        <span class="stat-label">Session Downloaded:</span>
+        <span class="stat-value" id="sessionDownloaded">3.85 GB</span>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-label">Current Bandwidth:</span>
+        <span class="stat-value stat-badge-speed" id="sessionSpeed">8.42 MB/s &darr;</span>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-label">Active Tasks:</span>
+        <span class="stat-value" id="activeTasksCount">2 downloading, 1 queued</span>
+      </div>
+    </div>
+
+    <div class="statusbar-right">
+      <!-- Storage Capacity Available / Total -->
+      <div class="storage-meter">
+        <span class="stat-label">Storage (Downloads):</span>
+        <span class="stat-value" id="storageText">248.2 GB free of 512.0 GB</span>
+        <div class="storage-bar-track" title="Storage Usage: 51.5% used">
+          <div class="storage-bar-fill" id="storageBarFill" style="width: 51.5%;"></div>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span style="color: var(--accent-green);">&#9679;</span>
+        <span style="font-size: 10px; color: var(--text-muted);">Core Connected</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal: Add New Download -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">New Download</div>
+        <button class="btn btn-icon" onclick="closeAddModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Download URL *</label>
+          <input type="text" class="form-input" id="modalUrl" placeholder="https://example.com/file.zip" value="https://mirror.archlinux.org/iso/latest/archlinux-x86_64.iso" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Save Filename (Optional)</label>
+          <input type="text" class="form-input" id="modalFilename" placeholder="archlinux-x86_64.iso" value="archlinux-x86_64.iso" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Download Directory</label>
+          <input type="text" class="form-input" id="modalDir" value="/home/eriya/Downloads/Programs" />
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Category</label>
+            <select class="form-input" id="modalCategory" style="background: var(--bg-surface0); color: white;">
+              <option>Programs (Auto-detected)</option>
+              <option>Compressed</option>
+              <option>Video</option>
+              <option>Audio</option>
+              <option>Documents</option>
+              <option>General</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Parts / Connections</label>
+            <select class="form-input" id="modalParts" style="background: var(--bg-surface0); color: white;">
+              <option>8 parts (Recommended)</option>
+              <option>4 parts</option>
+              <option>16 parts (Fast)</option>
+              <option>1 part (Single connection)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeAddModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmAddDownload()">Start Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mockup Data & Interactions Script -->
+  <script>
+    // Sample Initial Data modeled after internal/downloader/types.go
+    let downloads = [
+      {
+        id: "dl-1",
+        filename: "Fedora-Workstation-Live-40.iso",
+        category: "Programs",
+        url: "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Workstation/x86_64/iso/Fedora-Workstation-Live-x86_64-40-1.14.iso",
+        totalSize: 2523293286, // ~2.35 GB
+        currentSize: 1589674770, // ~1.48 GB
+        percentage: 63.0,
+        speed: 8831000, // 8.42 MB/s
+        eta: 105, // 1m 45s
+        status: 1, // StateDownloading
+        scheduledAt: null,
+        saveDir: "/home/eriya/Downloads/Programs/",
+        // Chunks dynamically assigned: no borders, seamlessly plotted
+        parts: [
+          { id: "p1", start: 0, end: 315411660, current: 315411660, pct: 100, speed: 0, status: "Done" },
+          { id: "p2", start: 315411661, end: 630823321, current: 630823321, pct: 100, speed: 0, status: "Done" },
+          { id: "p3", start: 630823322, end: 946234982, current: 946234982, pct: 100, speed: 0, status: "Done" },
+          { id: "p4", start: 946234983, end: 1261646643, current: 1261646643, pct: 100, speed: 0, status: "Done" },
+          { id: "p5", start: 1261646644, end: 1577058304, current: 1500000000, pct: 75.6, speed: 2200000, status: "Downloading" },
+          { id: "p6", start: 1577058305, end: 1892469965, current: 1710000000, pct: 42.1, speed: 2150000, status: "Downloading" },
+          { id: "p7", start: 1892469966, end: 2207881626, current: 1980000000, pct: 27.8, speed: 2300000, status: "Downloading" },
+          { id: "p8", start: 2207881627, end: 2523293286, current: 2260000000, pct: 16.5, speed: 2181000, status: "Downloading" }
+        ]
+      },
+      {
+        id: "dl-2",
+        filename: "linux-kernel-6.10-source.tar.xz",
+        category: "Compressed",
+        url: "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.tar.xz",
+        totalSize: 147849216, // 141 MB
+        currentSize: 62096670, // 59.2 MB
+        percentage: 42.0,
+        speed: 3410000, // 3.25 MB/s
+        eta: 25,
+        status: 1, // StateDownloading
+        scheduledAt: null,
+        saveDir: "/home/eriya/Downloads/Compressed/",
+        parts: [
+          { id: "p1", start: 0, end: 36962304, current: 36962304, pct: 100, speed: 0, status: "Done" },
+          { id: "p2", start: 36962305, end: 73924608, current: 55000000, pct: 48.8, speed: 1200000, status: "Downloading" },
+          { id: "p3", start: 73924609, end: 110886912, current: 85000000, pct: 29.9, speed: 1100000, status: "Downloading" },
+          { id: "p4", start: 110886913, end: 147849216, current: 120000000, pct: 24.6, speed: 1110000, status: "Downloading" }
+        ]
+      },
+      {
+        id: "dl-3",
+        filename: "Rust_Programming_Language_2nd_Ed.pdf",
+        category: "Documents",
+        url: "https://nostarch.com/download/rust_book_2nd.pdf",
+        totalSize: 18454937, // ~17.6 MB
+        currentSize: 0,
+        percentage: 0,
+        speed: 0,
+        eta: 0,
+        status: 0, // StateQueue
+        scheduledAt: null,
+        saveDir: "/home/eriya/Downloads/Documents/",
+        parts: []
+      },
+      {
+        id: "dl-4",
+        filename: "4K_Nature_Documentary_Trailer.mp4",
+        category: "Video",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        totalSize: 852938210, // ~813 MB
+        currentSize: 426469105,
+        percentage: 50.0,
+        speed: 0,
+        eta: 0,
+        status: 2, // StatePaused
+        scheduledAt: null,
+        saveDir: "/home/eriya/Downloads/Videos/",
+        parts: [
+          { id: "p1", start: 0, end: 426469105, current: 426469105, pct: 100, speed: 0, status: "Paused" },
+          { id: "p2", start: 426469106, end: 852938210, current: 426469106, pct: 0, speed: 0, status: "Paused" }
+        ]
+      },
+      {
+        id: "dl-5",
+        filename: "Blender-4.2.0-linux-x64.tar.xz",
+        category: "Compressed",
+        url: "https://download.blender.org/release/Blender4.2/blender-4.2.0-linux-x64.tar.xz",
+        totalSize: 325492100, // ~310 MB
+        currentSize: 325492100,
+        percentage: 100.0,
+        speed: 0,
+        eta: 0,
+        status: 3, // StateCompleted
+        scheduledAt: null,
+        saveDir: "/home/eriya/Downloads/Compressed/",
+        parts: [
+          { id: "p1", start: 0, end: 325492100, current: 325492100, pct: 100, speed: 0, status: "Done" }
+        ]
+      },
+      {
+        id: "dl-6",
+        filename: "Ubuntu-Nightly-Build-scheduled.iso",
+        category: "Programs",
+        url: "https://cdimage.ubuntu.com/daily-live/current/noble-desktop-amd64.iso",
+        totalSize: 4500000000,
+        currentSize: 0,
+        percentage: 0,
+        speed: 0,
+        eta: 0,
+        status: 5, // StateScheduled
+        scheduledAt: "Tonight at 02:00 AM",
+        saveDir: "/home/eriya/Downloads/Programs/",
+        parts: []
+      }
+    ];
+
+    const StatusNames = ["Queued", "Downloading", "Paused", "Completed", "Error", "Scheduled"];
+    const StatusBadges = [
+      { cls: "badge-queued", name: "Queued" },
+      { cls: "badge-downloading", name: "Downloading" },
+      { cls: "badge-paused", name: "Paused" },
+      { cls: "badge-completed", name: "Completed" },
+      { cls: "badge-error", name: "Error" },
+      { cls: "badge-scheduled", name: "Scheduled" }
+    ];
+
+    let selectedId = "dl-1";
+    let activeFilterType = "status"; // 'status' | 'category'
+    let currentFilterValue = "all";
+    let rateLimitActive = false;
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return "0 B";
+      const k = 1024;
+      const sizes = ["B", "KB", "MB", "GB", "TB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return (bytes / Math.pow(k, i)).toFixed(2) + " " + sizes[i];
+    }
+
+    function formatTime(seconds) {
+      if (!seconds || seconds <= 0) return "--:--";
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function getCategoryIcon(cat) {
+      switch (cat) {
+        case "Compressed": return `<span class="file-icon icon-archive">ZIP</span>`;
+        case "Video": return `<span class="file-icon icon-video">MP4</span>`;
+        case "Documents": return `<span class="file-icon icon-doc">PDF</span>`;
+        case "Programs": return `<span class="file-icon icon-program">ISO</span>`;
+        case "Audio": return `<span class="file-icon icon-audio">MP3</span>`;
+        default: return `<span class="file-icon icon-doc">FILE</span>`;
+      }
+    }
+
+    // Render Downloads Table
+    function renderTable() {
+      const tbody = document.getElementById("downloadsTableBody");
+      tbody.innerHTML = "";
+
+      const filtered = downloads.filter(item => {
+        if (currentFilterValue === "all") return true;
+        if (activeFilterType === "status") {
+          const statusMap = {
+            "downloading": 1,
+            "queued": 0,
+            "paused": 2,
+            "completed": 3,
+            "scheduled": 5,
+            "error": 4
+          };
+          return item.status === statusMap[currentFilterValue];
+        } else if (activeFilterType === "category") {
+          return item.category.toLowerCase() === currentFilterValue.toLowerCase();
+        }
+        return true;
+      });
+
+      filtered.forEach((item, index) => {
+        const isSelected = item.id === selectedId;
+        const tr = document.createElement("tr");
+        if (isSelected) tr.classList.add("selected");
+        tr.onclick = () => selectDownload(item.id);
+
+        const st = StatusBadges[item.status] || StatusBadges[0];
+        const fillClass = `fill-${st.name.toLowerCase()}`;
+
+        tr.innerHTML = `
+          <td style="color: var(--text-muted); font-size: 11px;">${index + 1}</td>
+          <td>
+            <div class="col-file">
+              ${getCategoryIcon(item.category)}
+              <div class="file-name-block">
+                <div class="file-name" title="${item.filename}">${item.filename}</div>
+                <div class="file-subtext">${item.saveDir}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge-cat">${item.category}</span></td>
+          <td style="font-family: monospace;">${formatBytes(item.totalSize)}</td>
+          <td>
+            <div class="table-progress-box">
+              <div class="progress-track">
+                <div class="progress-bar-fill ${fillClass}" style="width: ${item.percentage}%;"></div>
+              </div>
+              <div class="progress-meta">
+                <span>${item.percentage.toFixed(1)}%</span>
+                <span>${formatBytes(item.currentSize)}</span>
+              </div>
+            </div>
+          </td>
+          <td style="font-family: monospace; color: ${item.speed > 0 ? 'var(--accent-green)' : 'var(--text-muted)'}">
+            ${item.speed > 0 ? formatBytes(item.speed) + '/s' : '-'}
+          </td>
+          <td style="font-family: monospace; color: var(--text-sub);">
+            ${item.eta > 0 ? formatTime(item.eta) : (item.status === 3 ? 'Done' : (item.scheduledAt || '--'))}
+          </td>
+          <td>
+            <span class="status-badge ${st.cls}">
+              ${item.status === 1 ? '<span class="badge-pulse-dot"></span>' : ''}
+              ${st.name}
+            </span>
+          </td>
+          <td style="text-align: right;">
+            <div class="table-actions">
+              ${item.status === 1 ? `
+                <button class="btn-row-action" title="Pause" onclick="event.stopPropagation(); togglePauseItem('${item.id}')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                </button>
+              ` : (item.status === 2 || item.status === 0) ? `
+                <button class="btn-row-action" title="Resume" onclick="event.stopPropagation(); toggleResumeItem('${item.id}')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+              ` : `
+                <button class="btn-row-action" title="Open folder" onclick="event.stopPropagation(); openActiveFolder()">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+              `}
+              <button class="btn-row-action btn-danger" title="Delete" onclick="event.stopPropagation(); deleteItem('${item.id}')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      updateCounts();
+    }
+
+    function updateCounts() {
+      document.getElementById("countAll").innerText = downloads.length;
+      document.getElementById("countDownloading").innerText = downloads.filter(d => d.status === 1).length;
+      document.getElementById("countQueued").innerText = downloads.filter(d => d.status === 0).length;
+      document.getElementById("countPaused").innerText = downloads.filter(d => d.status === 2).length;
+      document.getElementById("countCompleted").innerText = downloads.filter(d => d.status === 3).length;
+      document.getElementById("countScheduled").innerText = downloads.filter(d => d.status === 5).length;
+    }
+
+    function selectDownload(id) {
+      selectedId = id;
+      renderTable();
+      renderDetails();
+    }
+
+    // Render the Pinned Details Pane
+    function renderDetails() {
+      const item = downloads.find(d => d.id === selectedId) || downloads[0];
+      if (!item) return;
+
+      document.getElementById("detailFilename").innerText = item.filename;
+      
+      const st = StatusBadges[item.status] || StatusBadges[0];
+      const detailBadge = document.getElementById("detailBadge");
+      detailBadge.className = `status-badge ${st.cls}`;
+      detailBadge.innerHTML = `${item.status === 1 ? '<span class="badge-pulse-dot"></span>' : ''} ${st.name}`;
+
+      // Tab 1: General Details
+      document.getElementById("genOverallPct").innerText = `${item.percentage.toFixed(1)}%`;
+      document.getElementById("genOverallStats").innerText = `${formatBytes(item.currentSize)} / ${formatBytes(item.totalSize)} • ${item.speed > 0 ? formatBytes(item.speed) + '/s' : (item.status === 3 ? 'Finished' : 'Paused')} • ETA: ${item.eta > 0 ? formatTime(item.eta) : '--:--'}`;
+      document.getElementById("genProgressBarFill").style.width = `${item.percentage}%`;
+
+      document.getElementById("valUrl").innerText = item.url;
+      document.getElementById("valDir").innerText = item.saveDir;
+      document.getElementById("valMultipart").innerText = item.parts && item.parts.length > 0 
+        ? `Supported (${item.parts.length} dynamic workers)` 
+        : "Single connection stream";
+      document.getElementById("valDate").innerText = item.scheduledAt ? `Scheduled: ${item.scheduledAt}` : "Direct Download";
+      document.getElementById("valCategoryState").innerText = `${item.category} • ${st.name}`;
+
+      // Tab 2: Seamless Progress & Parts (NO borders between parts!)
+      const parts = item.parts || [];
+      const track = document.getElementById("seamlessBarTrack");
+      track.innerHTML = "";
+
+      document.getElementById("progActivePartsCount").innerText = `${parts.filter(p => p.status === 'Downloading').length} Active / ${parts.length} Workers`;
+      document.getElementById("progSpeedLabel").innerText = item.speed > 0 ? `${formatBytes(item.speed)}/s` : "0 B/s";
+      document.getElementById("progByteStats").innerText = `Downloaded ${formatBytes(item.currentSize)} of ${formatBytes(item.totalSize)} (${item.percentage.toFixed(1)}%)`;
+
+      if (parts.length === 0) {
+        // Fallback single stream bar
+        const slice = document.createElement("div");
+        slice.className = "seamless-part-slice" + (item.status === 3 ? " completed" : (item.status === 1 ? " active" : ""));
+        slice.style.left = "0%";
+        slice.style.width = `${item.percentage}%`;
+        track.appendChild(slice);
+      } else {
+        // Render each chunk's downloaded byte range seamlessly inside the track
+        // Because there's NO border or margin, contiguous chunks seamlessly blend!
+        parts.forEach((p) => {
+          if (p.current > p.start) {
+            const leftPct = (p.start / item.totalSize) * 100;
+            const downloadedBytes = Math.min(p.current, p.end) - p.start;
+            const widthPct = (downloadedBytes / item.totalSize) * 100;
+
+            const slice = document.createElement("div");
+            slice.className = "seamless-part-slice" + (p.pct >= 100 ? " completed" : (p.status === "Downloading" ? " active" : ""));
+            slice.style.left = `${leftPct}%`;
+            slice.style.width = `${widthPct}%`;
+            slice.title = `Worker Range: ${formatBytes(p.start)} - ${formatBytes(p.end)} (${p.pct.toFixed(1)}% complete)`;
+            track.appendChild(slice);
+          }
+        });
+      }
+    }
+
+    // Detail Tabs Switching: General vs Progress (Aligned to the Right)
+    function switchDetailTab(tab) {
+      const isGen = tab === 'general';
+      document.getElementById("tabBtnGeneral").classList.toggle("active", isGen);
+      document.getElementById("tabBtnProgress").classList.toggle("active", !isGen);
+      document.getElementById("tabContentGeneral").style.display = isGen ? "flex" : "none";
+      document.getElementById("tabContentProgress").style.display = !isGen ? "flex" : "none";
+    }
+
+    // Sidebar Modes Switching (Status vs Categories)
+    function switchSidebarMode(mode) {
+      activeFilterType = mode;
+      currentFilterValue = "all";
+      document.getElementById("modeStatusBtn").classList.toggle("active", mode === 'status');
+      document.getElementById("modeCategoryBtn").classList.toggle("active", mode === 'category');
+      document.getElementById("statusNavGroup").style.display = mode === 'status' ? "block" : "none";
+      document.getElementById("categoryNavGroup").style.display = mode === 'category' ? "block" : "none";
+
+      document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+      const defaultActive = mode === 'status' 
+        ? document.querySelector("#statusNavGroup .nav-item")
+        : document.querySelector("#categoryNavGroup .nav-item");
+      if (defaultActive) defaultActive.classList.add("active");
+
+      renderTable();
+    }
+
+    function filterByStatus(status, el) {
+      currentFilterValue = status;
+      document.querySelectorAll("#statusNavGroup .nav-item").forEach(item => item.classList.remove("active"));
+      el.classList.add("active");
+      renderTable();
+    }
+
+    function filterByCategory(cat, el) {
+      currentFilterValue = cat;
+      document.querySelectorAll("#categoryNavGroup .nav-item").forEach(item => item.classList.remove("active"));
+      el.classList.add("active");
+      renderTable();
+    }
+
+    function handleSearch(query) {
+      const q = query.toLowerCase().trim();
+      const rows = document.querySelectorAll("#downloadsTableBody tr");
+      rows.forEach(tr => {
+        const text = tr.innerText.toLowerCase();
+        tr.style.display = text.includes(q) ? "" : "none";
+      });
+    }
+
+    function toggleDetailsCollapse() {
+      const pane = document.getElementById("detailsPane");
+      pane.classList.toggle("collapsed");
+      const btn = document.getElementById("toggleCollapseBtn");
+      btn.innerHTML = pane.classList.contains("collapsed") 
+        ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>`
+        : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+    }
+
+    function toggleRateLimit() {
+      rateLimitActive = !rateLimitActive;
+      const label = document.getElementById("speedLimitLabel");
+      const btn = document.getElementById("speedLimitBtn");
+      if (rateLimitActive) {
+        label.innerText = "Limit: 5 MB/s";
+        btn.style.borderColor = "var(--accent-yellow)";
+        btn.style.color = "var(--accent-yellow)";
+      } else {
+        label.innerText = "Limit: Unlimited";
+        btn.style.borderColor = "transparent";
+        btn.style.color = "var(--text-main)";
+      }
+    }
+
+    function copyActiveUrl() {
+      const item = downloads.find(d => d.id === selectedId);
+      if (item) {
+        navigator.clipboard.writeText(item.url);
+        alert("Copied to clipboard:\n" + item.url);
+      }
+    }
+
+    function openActiveFolder() {
+      const item = downloads.find(d => d.id === selectedId);
+      alert(`Opening directory in system file explorer:\n${item ? item.saveDir : '/home/eriya/Downloads'}`);
+    }
+
+    // Modal controls
+    function openAddModal() {
+      document.getElementById("addModal").classList.add("open");
+    }
+    function closeAddModal() {
+      document.getElementById("addModal").classList.remove("open");
+    }
+    function confirmAddDownload() {
+      const url = document.getElementById("modalUrl").value.trim();
+      const fn = document.getElementById("modalFilename").value.trim() || "downloaded-file";
+      const dir = document.getElementById("modalDir").value.trim();
+      if (!url) return;
+
+      const newDl = {
+        id: "dl-" + Date.now(),
+        filename: fn,
+        category: "Programs",
+        url: url,
+        totalSize: 1048576000,
+        currentSize: 10485760,
+        percentage: 1.0,
+        speed: 6200000,
+        eta: 165,
+        status: 1, // downloading
+        scheduledAt: null,
+        saveDir: dir,
+        parts: [
+          { id: "p1", start: 0, end: 262144000, current: 20000000, pct: 7.6, speed: 1500000, status: "Downloading" },
+          { id: "p2", start: 262144001, end: 524288000, current: 262144001 + 10000000, pct: 3.8, speed: 1550000, status: "Downloading" },
+          { id: "p3", start: 524288001, end: 786432000, current: 524288001 + 8000000, pct: 3.0, speed: 1550000, status: "Downloading" },
+          { id: "p4", start: 786432001, end: 1048576000, current: 786432001 + 4000000, pct: 1.5, speed: 1600000, status: "Downloading" }
+        ]
+      };
+      downloads.unshift(newDl);
+      selectedId = newDl.id;
+      closeAddModal();
+      renderTable();
+      renderDetails();
+    }
+
+    function togglePauseItem(id) {
+      const it = downloads.find(d => d.id === id);
+      if (it) {
+        it.status = 2; // paused
+        it.speed = 0;
+        renderTable();
+        renderDetails();
+      }
+    }
+
+    function toggleResumeItem(id) {
+      const it = downloads.find(d => d.id === id);
+      if (it) {
+        it.status = 1; // downloading
+        it.speed = 5200000;
+        renderTable();
+        renderDetails();
+      }
+    }
+
+    function deleteItem(id) {
+      if (confirm("Remove this download from the list?")) {
+        downloads = downloads.filter(d => d.id !== id);
+        if (selectedId === id && downloads.length > 0) {
+          selectedId = downloads[0].id;
+        }
+        renderTable();
+        renderDetails();
+      }
+    }
+
+    function resumeSelected() { toggleResumeItem(selectedId); }
+    function pauseSelected() { togglePauseItem(selectedId); }
+    function deleteSelected() { deleteItem(selectedId); }
+
+    // =========================================================
+    // Real-Time Speed Graph Animation (FDM / NetLimiter Style)
+    // =========================================================
+    const canvas = document.getElementById("speedCanvas");
+    const ctx = canvas.getContext("2d");
+    const speedHistory = new Array(60).fill(0).map(() => 6 + Math.random() * 4); // MB/s
+
+    function updateSpeedGraph() {
+      const item = downloads.find(d => d.id === selectedId);
+      const curMb = (item && item.status === 1) ? (item.speed / (1024 * 1024)) + (Math.random() * 1.5 - 0.75) : 0;
+      speedHistory.push(Math.max(0, curMb));
+      speedHistory.shift();
+
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+
+      // Gridlines
+      ctx.strokeStyle = "#262738";
+      ctx.lineWidth = 1;
+      for (let y = 15; y < height; y += 20) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Draw Speed Area & Line
+      const maxVal = Math.max(12, ...speedHistory) * 1.2;
+      const step = width / (speedHistory.length - 1);
+
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      speedHistory.forEach((val, i) => {
+        const x = i * step;
+        const y = height - (val / maxVal) * (height - 8);
+        if (i === 0) ctx.lineTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.lineTo(width, height);
+      ctx.closePath();
+
+      // Gradient Fill
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, "rgba(137, 180, 250, 0.45)");
+      grad.addColorStop(1, "rgba(137, 180, 250, 0.0)");
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Line Stroke
+      ctx.beginPath();
+      speedHistory.forEach((val, i) => {
+        const x = i * step;
+        const y = height - (val / maxVal) * (height - 8);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "#89b4fa";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Update Labels
+      const peak = Math.max(...speedHistory);
+      const curr = speedHistory[speedHistory.length - 1];
+      document.getElementById("peakSpeedLabel").innerText = peak.toFixed(2) + " MB/s";
+      document.getElementById("currSpeedLabel").innerText = curr.toFixed(2) + " MB/s";
+      document.getElementById("sessionSpeed").innerHTML = curr.toFixed(2) + " MB/s &darr;";
+    }
+
+    // Live tick every second
+    setInterval(() => {
+      downloads.forEach(d => {
+        if (d.status === 1) {
+          d.currentSize += d.speed * 0.5;
+          if (d.currentSize >= d.totalSize) {
+            d.currentSize = d.totalSize;
+            d.status = 3; // completed
+            d.speed = 0;
+            d.percentage = 100;
+          } else {
+            d.percentage = (d.currentSize / d.totalSize) * 100;
+          }
+
+          // Advance active parts smoothly
+          if (d.parts && d.parts.length > 0) {
+            d.parts.forEach(p => {
+              if (p.status === "Downloading" && p.current < p.end) {
+                p.current = Math.min(p.end, p.current + (p.speed || 1500000) * 0.5);
+                p.pct = ((p.current - p.start) / (p.end - p.start)) * 100;
+                if (p.pct >= 100) p.status = "Done";
+              }
+            });
+          }
+        }
+      });
+
+      renderTable();
+      renderDetails();
+      updateSpeedGraph();
+    }, 1000);
+
+    // Initial render
+    renderTable();
+    renderDetails();
+    updateSpeedGraph();
+  </script>
+</body>
+</html>

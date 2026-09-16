@@ -1,4 +1,6 @@
 build/
 PLAN.md
+UI_SPEC.md
 coverage.out
+temp/
 

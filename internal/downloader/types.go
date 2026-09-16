@@ -113,6 +113,7 @@ type DownloadRepository interface {
 	UpdateFilename(id string, newFilename string) error
 	GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error)
 	GetCategories() ([]*Category, error)
+	GetAllSettings() (*Settings, error)
 }
 
 type TargetInfo struct {
