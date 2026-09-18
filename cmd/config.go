@@ -12,7 +12,7 @@ import (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "View and modify gdl configuration",
+	Short: "View and modify downstream configuration",
 }
 
 var configListCmd = &cobra.Command{
@@ -49,7 +49,7 @@ var configSetCmd = &cobra.Command{
 		val := args[1]
 
 		dir, _ := os.UserConfigDir()
-		repo, err := downloader.NewSQLiteRepository(filepath.Join(dir, "gdl", "gdl.db"))
+		repo, err := downloader.NewSQLiteRepository(filepath.Join(dir, "downstream", "downstream_download.db"))
 		if err != nil {
 			return err
 		}
