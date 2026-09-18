@@ -1,4 +1,4 @@
-module github.com/fumorin/gdl-manager
+module github.com/fumorin/downstream
 
 go 1.26.3
 

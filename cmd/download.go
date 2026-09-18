@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fumorin/gdl-manager/internal/downloader"
+	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"

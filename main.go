@@ -15,7 +15,7 @@ var assets embed.FS
 func main() {
 	app := NewApp()
 	err := wails.Run(&options.App{
-		Title:  "GDL Manager",
+		Title:  "Downstream",
 		Width:  1080,
 		Height: 720,
 		AssetServer: &assetserver.Options{

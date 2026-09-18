@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/fumorin/gdl-manager/internal/downloader"
+	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 )

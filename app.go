@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/fumorin/gdl-manager/internal/downloader"
+	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/google/uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -29,11 +29,11 @@ func (a *App) startup(ctx context.Context) {
 	configDir, err := os.UserConfigDir()
 	var dbPath string
 	if err == nil {
-		gdlDir := filepath.Join(configDir, "gdl")
-		_ = os.MkdirAll(gdlDir, 0o755)
-		dbPath = filepath.Join(gdlDir, "gdl.db")
+		downstreamDir := filepath.Join(configDir, "downstream")
+		_ = os.MkdirAll(downstreamDir, 0o755)
+		dbPath = filepath.Join(downstreamDir, "downstream_download.db")
 	} else {
-		dbPath = "gdl.db"
+		dbPath = "downstream_download.db"
 	}
 
 	repo, err := downloader.NewSQLiteRepository(dbPath)

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"github.com/fumorin/gdl-manager/internal/downloader"
+	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ var configListCmd = &cobra.Command{
 	Short: "List all of the current configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir, _ := os.UserConfigDir()
-		repo, err := downloader.NewSQLiteRepository(filepath.Join(dir, "gdl", "gdl.db"))
+		repo, err := downloader.NewSQLiteRepository(filepath.Join(dir, "downstream", "downstream_download.db"))
 		if err != nil {
 			return err
 		}

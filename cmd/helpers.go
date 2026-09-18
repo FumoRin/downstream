@@ -8,7 +8,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/fumorin/gdl-manager/internal/downloader"
+	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 )

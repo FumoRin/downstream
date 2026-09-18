@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/fumorin/gdl-manager/cmd"
+	"github.com/fumorin/downstream/cmd"
 )
 
 func main() {

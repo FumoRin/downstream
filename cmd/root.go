@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/fumorin/gdl-manager/internal/downloader"
+	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/spf13/cobra"
 )
 
@@ -17,18 +17,18 @@ type App struct {
 var app App
 
 var rootCmd = &cobra.Command{
-	Use:   "gdl",
+	Use:   "downstream",
 	Short: "Download file from the internet",
 	Long:  "A CLI Tool for downloading file from the internet",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		dir, err := os.UserConfigDir()
+		configDir, err := os.UserConfigDir()
 		var dbPath string
 		if err == nil {
-			gdlDir := filepath.Join(dir, "gdl")
-			_ = os.MkdirAll(gdlDir, 0o755)
-			dbPath = filepath.Join(gdlDir, "gdl.db")
+			downstreamDir := filepath.Join(configDir, "downstream")
+			_ = os.MkdirAll(downstreamDir, 0o755)
+			dbPath = filepath.Join(downstreamDir, "downstream_download.db")
 		} else {
-			dbPath = "gdl.db"
+			dbPath = "downstream_download.db"
 		}
 		repo, err := downloader.NewSQLiteRepository(dbPath)
 		if err != nil {
