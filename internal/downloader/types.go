@@ -53,16 +53,19 @@ type DownloadManager struct {
 }
 
 type DownloadState struct {
-	ID          string
-	URL         string
-	Filename    string
-	Category    string
-	TotalSize   int64
-	Status      DownloadStatus
-	ScheduledAt *time.Time
+	ID          string         `json:"id"`
+	URL         string         `json:"url"`
+	Filename    string         `json:"filename"`
+	Category    string         `json:"category"`
+	TotalSize   int64          `json:"totalSize"`
+	CurrentSize int64          `json:"currentSize"`
+	Percentage  float64        `json:"percentage"`
+	Status      DownloadStatus `json:"status"`
+	ScheduledAt *time.Time     `json:"scheduledAt"`
 }
 
 type ProgressWriter struct {
+	ID           string
 	Filename     string
 	Total        int64
 	Current      int64
@@ -75,12 +78,13 @@ type ProgressWriter struct {
 }
 
 type Progress struct {
-	Filename    string
-	Percentage  float64
-	CurrentSize int64
-	TotalSize   int64
-	Speed       float64
-	ETA         time.Duration
+	ID          string        `json:"id"`
+	Filename    string        `json:"filename"`
+	Percentage  float64       `json:"percentage"`
+	CurrentSize int64         `json:"currentSize"`
+	TotalSize   int64         `json:"totalSize"`
+	Speed       float64       `json:"speed"`
+	ETA         time.Duration `json:"eta"`
 }
 
 func (s DownloadStatus) String() string {

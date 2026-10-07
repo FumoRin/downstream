@@ -74,6 +74,13 @@ func (m *DownloadManager) StopDownload(id string) {
 	if ok {
 		cancel()
 	}
+
+	if state, err := m.repo.GetDownload(id); err == nil && state != nil {
+		if state.Status != StateCompleted {
+			state.Status = StatePaused
+			_ = m.repo.SaveDownload(state)
+		}
+	}
 }
 
 func (m *DownloadManager) RenameDownload(id string, newFilename string) error {
@@ -169,6 +176,16 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 		return
 	}
 
+	// If this job was already paused or deleted while queued, do not run it
+	initialState, err := m.repo.GetDownload(job.ID)
+	if err != nil || initialState == nil || initialState.Status == StatePaused {
+		return
+	}
+
+	// Mark as Downloading
+	initialState.Status = StateDownloading
+	_ = m.repo.SaveDownload(initialState)
+
 	// If it's downloading
 	ctx, cancel := context.WithCancel(m.ctx)
 	m.cancellationsMu.Lock()
@@ -188,7 +205,11 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 	totalSize, filename, downloadErr := Download(job.ID, job.URL, opts, ctx)
 
 	state, err := m.repo.GetDownload(job.ID)
-	if err != nil {
+	if err != nil || state == nil {
+		m.cancellationsMu.Lock()
+		delete(m.cancellations, job.ID)
+		m.cancellationsMu.Unlock()
+		cancel()
 		return
 	}
 
@@ -211,7 +232,7 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 		if err := m.repo.DeletePart(job.ID); err != nil {
 			fmt.Printf("Failed to clean up workers tracking %s: %v\n", state.Filename, err)
 		}
-	} else if errors.Is(downloadErr, context.Canceled) {
+	} else if errors.Is(downloadErr, context.Canceled) || ctx.Err() != nil {
 		state.Status = StatePaused
 	} else {
 		state.Status = StateError
@@ -221,7 +242,6 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 
 	if err := m.repo.SaveDownload(state); err != nil {
 		fmt.Printf("database error: %v\n", err)
-		return
 	}
 
 	m.cancellationsMu.Lock()
@@ -326,15 +346,68 @@ func (m *DownloadManager) ProgressChan() <- chan Progress {
 
 // GetDownload : Repo access delegation for Get Download
 func (m *DownloadManager) GetDownload(id string) (*DownloadState, error) {
-	return m.repo.GetDownload(id)
+	state, err := m.repo.GetDownload(id)
+	if err != nil || state == nil {
+		return state, err
+	}
+	m.populateDownloadProgress(state)
+	return state, nil
 }
 
 // GetIncompleteDownload : Repo access delegation for Get Incomplete Download
 func (m *DownloadManager) GetIncompleteDownload() ([]*DownloadState, error) {
-	return m.repo.GetIncompleteDownload()
+	states, err := m.repo.GetIncompleteDownload()
+	if err != nil {
+		return nil, err
+	}
+	for _, s := range states {
+		m.populateDownloadProgress(s)
+	}
+	return states, nil
 }
 
 // GetAllDownload : Repo access delegation for Get Incomplete Download
 func (m *DownloadManager) GetAllDownload() ([]*DownloadState, error) {
-	return m.repo.GetAllDownloads()
+	states, err := m.repo.GetAllDownloads()
+	if err != nil {
+		return nil, err
+	}
+	for _, s := range states {
+		m.populateDownloadProgress(s)
+	}
+	return states, nil
+}
+
+func (m *DownloadManager) populateDownloadProgress(s *DownloadState) {
+	if s == nil {
+		return
+	}
+
+	if s.Status == StateCompleted {
+		s.CurrentSize = s.TotalSize
+		s.Percentage = 100.0
+		return
+	}
+
+	// 1. Check multipart parts
+	if parts, err := m.repo.GetParts(s.ID); err == nil && len(parts) > 0 {
+		var downloaded int64
+		for _, p := range parts {
+			downloaded += p.CurrentByte
+		}
+		s.CurrentSize = downloaded
+	} else {
+		// 2. Check temp file on disk
+		tmpFile := s.Filename + "." + s.ID + ".tmp"
+		if stat, err := os.Stat(tmpFile); err == nil {
+			s.CurrentSize = stat.Size()
+		}
+	}
+
+	if s.TotalSize > 0 {
+		s.Percentage = (float64(s.CurrentSize) / float64(s.TotalSize)) * 100.0
+		if s.Percentage > 100.0 {
+			s.Percentage = 100.0
+		}
+	}
 }

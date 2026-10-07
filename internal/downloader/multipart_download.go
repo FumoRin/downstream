@@ -46,7 +46,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 
 	progresTickerCtx, stopTicker := context.WithCancel(ctx)
 	defer stopTicker()
-	go reportMultiPartProgress(progresTickerCtx, info.Filename, totalSize, &totalDownload, opts.Progress)
+	go reportMultiPartProgress(progresTickerCtx, id, info.Filename, totalSize, &totalDownload, opts.Progress)
 
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(parts))
@@ -96,6 +96,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 	if opts.Progress != nil {
 		select {
 		case opts.Progress <- Progress{
+			ID:          id,
 			Filename:    finalFilename,
 			Percentage:  100.0,
 			CurrentSize: totalSize,
@@ -149,7 +150,7 @@ func getOrPartHelper(downloadID string, totalSize int64, numParts int, repo Down
 	return parts, nil
 }
 
-func reportMultiPartProgress(ctx context.Context, filename string, totalSize int64, totalDownload *atomic.Int64, progressChan chan<- Progress) {
+func reportMultiPartProgress(ctx context.Context, id string, filename string, totalSize int64, totalDownload *atomic.Int64, progressChan chan<- Progress) {
 	if progressChan == nil {
 		return
 	}
@@ -183,6 +184,7 @@ func reportMultiPartProgress(ctx context.Context, filename string, totalSize int
 			}
 
 			update := Progress{
+				ID:          id,
 				Filename:    filename,
 				Percentage:  percentage,
 				CurrentSize: current,

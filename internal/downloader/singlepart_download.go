@@ -63,12 +63,13 @@ func singlepartDownload(id string, url string, info *TargetInfo, opts DownloadOp
 		}
 
 		pw := &ProgressWriter{
-			Filename: filename,
-			Total: totalsize,
-			Current: currentSize,
-			ByteAtStart: currentSize,
-			Destination: file,
-			StartTime: time.Now(),
+			ID:           id,
+			Filename:     filename,
+			Total:        totalsize,
+			Current:      currentSize,
+			ByteAtStart:  currentSize,
+			Destination:  file,
+			StartTime:    time.Now(),
 			ProgressChan: opts.Progress,
 		}
 
@@ -83,11 +84,25 @@ func singlepartDownload(id string, url string, info *TargetInfo, opts DownloadOp
 			if err := os.Rename(tmpFilename, finalFilename); err != nil {
 				return totalsize, filename, err
 			}
+			if opts.Progress != nil {
+				select {
+				case opts.Progress <- Progress{
+					ID:          id,
+					Filename:    finalFilename,
+					Percentage:  100.0,
+					CurrentSize: totalsize,
+					TotalSize:   totalsize,
+					Speed:       0,
+					ETA:         0,
+				}:
+				default:
+				}
+			}
 			return totalsize, finalFilename, err
 		}
 		
 		if ctx.Err() != nil {
-			return 0, "", ctx.Err()
+			return totalsize, filename, ctx.Err()
 		}
 		
 		if stat, err := os.Stat(tmpFilename); err == nil {

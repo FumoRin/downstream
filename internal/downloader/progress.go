@@ -18,12 +18,13 @@ func (pw *ProgressWriter) Write(p []byte) (int, error) {
 	if time.Since(pw.LastUpdate) > 200*time.Millisecond {
 		pw.LastUpdate = time.Now()
 		update := Progress{
-			Filename: pw.Filename,
+			ID:          pw.ID,
+			Filename:    pw.Filename,
 			CurrentSize: pw.Current,
-			TotalSize: pw.Total,
-			Speed: float64(pw.Speed()),
-			Percentage: percentage,
-			ETA: pw.Eta(),
+			TotalSize:   pw.Total,
+			Speed:       float64(pw.Speed()),
+			Percentage:  percentage,
+			ETA:         pw.Eta(),
 		}
 
 		select {
