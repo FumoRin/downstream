@@ -14,6 +14,10 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function ProbeURL(arg1) {
+  return window['go']['main']['App']['ProbeURL'](arg1);
+}
+
 export function ResumeDownload(arg1) {
   return window['go']['main']['App']['ResumeDownload'](arg1);
 }

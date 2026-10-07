@@ -66,6 +66,17 @@ func (a *App) shutdown(ctx context.Context) {
 
 // === Exported Go Methods to Wails ===
 
+func (a *App) ProbeURL(url string) (*downloader.TargetInfo, error) {
+	if url == "" {
+		return nil, fmt.Errorf("URL cannot be empty")
+	}
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return downloader.ProbeURL(ctx, url)
+}
+
 func (a *App) StartDownload(url, customFilename, customDir string) (string, error) {
 	if url == "" {
 		return "", fmt.Errorf("URL cannot be empty")

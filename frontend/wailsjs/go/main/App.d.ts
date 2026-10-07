@@ -8,6 +8,8 @@ export function GetAllDownloads():Promise<Array<downloader.DownloadState>>;
 
 export function GetSettings():Promise<downloader.Settings>;
 
+export function ProbeURL(arg1:string):Promise<downloader.TargetInfo>;
+
 export function ResumeDownload(arg1:string):Promise<void>;
 
 export function StartDownload(arg1:string,arg2:string,arg3:string):Promise<string>;

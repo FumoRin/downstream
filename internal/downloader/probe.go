@@ -6,7 +6,19 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// ProbeURL tests reachability and retrieves remote file metadata (filename, size, multi-part support)
+func ProbeURL(ctx context.Context, rawURL string) (*TargetInfo, error) {
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+	opts := DownloadOptions{
+		URL: rawURL,
+	}
+	return probeServerSupport(ctx, client, rawURL, opts)
+}
 
 func supportsMultiPart(resp *http.Response) bool {
 	if resp.ContentLength <= 0 {
