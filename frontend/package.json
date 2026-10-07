@@ -15,6 +15,7 @@
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^24.13.3",
     "autoprefixer": "^10.6.1",
+    "phosphor-svelte": "^3.1.0",
     "postcss": "^8.5.28",
     "svelte": "^5.57.0",
     "svelte-check": "^4.7.6",
