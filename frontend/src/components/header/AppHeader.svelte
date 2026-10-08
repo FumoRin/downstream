@@ -41,7 +41,7 @@
 <header
   class="h-11.5 bg-tokyo-bgDark border-b border-tokyo-borderSubtle px-4 flex items-center gap-3 shrink-0 z-10"
 >
-  <div class="flex items-center gap-2.5 mr-2">
+  <div class="w-47 flex items-center gap-2.5 mr-2">
     <!-- Need to be replaced with actual icons later -->
     <div
       class="w-6 h-6 rounded bg-tokyo-teal text-tokyo-bgDark font-black text-xs flex items-center justify-center shadow-md"
@@ -50,10 +50,6 @@
     </div>
     <span class="font-bold text-sm text-tokyo-textMain tracking-wide"
       >Downstream</span
-    >
-    <span
-      class="text-[10px] font-medium bg-tokyo-bgSurface text-tokyo-cyan px-1.5 py-0.5 rounded border border-tokyo-borderSubtle"
-      >Desktop</span
     >
   </div>
 

@@ -117,10 +117,10 @@
 <!-- Outer Container with background click to unfocus -->
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div
-  class="flex-1 min-h-0 overflow-auto bg-tokyo-bgBase select-none"
+  class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-tokyo-bgBase select-none"
   onclick={onUnfocus}
 >
-  <table class="w-full border-collapse text-left text-xs font-sans">
+  <table class="w-full table-fixed border-collapse text-left text-xs font-sans">
     <thead
       class="sticky top-0 z-10 bg-tokyo-bgDark border-b border-tokyo-borderSubtle text-tokyo-textMuted uppercase text-[10px] tracking-wider"
     >
@@ -153,7 +153,7 @@
         </th>
 
         <th
-          class="w-24 th-header"
+          class="w-24 th-header hidden xl:table-cell"
           onclick={() => onSortChange?.("category")}
         >
           <div class="flex items-center gap-1">
@@ -209,7 +209,7 @@
         </th>
 
         <th
-          class="w-16 th-header"
+          class="w-16 th-header hidden lg:table-cell"
           onclick={() => onSortChange?.("eta")}
         >
           <div class="flex items-center gap-1">
@@ -237,7 +237,7 @@
         </th>
 
         <th
-          class="w-28 th-header"
+          class="w-28 th-header hidden xl:table-cell"
           onclick={() => onSortChange?.("createdAt")}
         >
           <div class="flex items-center gap-1">
@@ -289,10 +289,10 @@
           >
 
           <!-- Filename + FileTypeIcon + SaveDir -->
-          <td class="px-3 py-2.5">
+          <td class="px-3 py-2.5 min-w-0">
             <div class="flex items-center gap-2.5 min-w-0">
               <FileTypeIcon category={item.category} size={15} />
-              <div class="min-w-0 truncate">
+              <div class="min-w-0 flex-1 truncate">
                 <div
                   class="font-semibold text-tokyo-textMain truncate leading-tight"
                 >
@@ -308,7 +308,7 @@
           </td>
 
           <!-- Category -->
-          <td class="td-cell"
+          <td class="td-cell hidden xl:table-cell"
             >{item.category || "General"}</td
           >
 
@@ -351,7 +351,7 @@
           </td>
 
           <!-- ETA -->
-          <td class="td-mono-muted">
+          <td class="td-mono-muted hidden lg:table-cell">
             {item.status === 3
               ? "Done"
               : item.status === 1
@@ -371,7 +371,7 @@
 
           <!-- Date Added -->
           <td
-            class="td-mono-muted whitespace-nowrap"
+            class="td-mono-muted whitespace-nowrap hidden xl:table-cell"
           >
             {formatDate(item.createdAt)}
           </td>
@@ -423,7 +423,7 @@
       {:else}
         <tr>
           <td
-            colspan={multiSelectMode ? 11 : 10}
+            colspan="100"
             class="text-center py-16 text-tokyo-textMuted"
           >
             <div class="space-y-1">

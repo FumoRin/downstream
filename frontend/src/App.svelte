@@ -9,6 +9,8 @@
   import AddDownloadModal from "./components/header/AddDownloadModal.svelte";
   import DeleteConfirmModal from "./components/table/DeleteConfirmModal.svelte";
 
+  import { splitPath } from "./utils/formatters";
+
   // Wails auto-generated Go bindings
   import {
     StartDownload,
@@ -124,6 +126,8 @@
         downloads = raw.map((d: any) => {
           const id = d.id || d.ID || "";
           const existing = downloads.find((item) => item.id === id);
+          const rawPath = d.filename || d.Filename || existing?.filename || "download"
+          const {filename: baseName, dir: parsedDir} = splitPath(rawPath)
           const rawStatus = (d.status !== undefined ? d.status : d.Status) ?? 0;
           const status =
             existing?.status === 2 && rawStatus === 1 ? 2 : rawStatus;
@@ -142,8 +146,7 @@
 
           return {
             id,
-            filename:
-              d.filename || d.Filename || existing?.filename || "download",
+            filename: baseName,
             category:
               d.category || d.Category || existing?.category || "General",
             url: d.url || d.URL || existing?.url || "",
@@ -165,7 +168,7 @@
               d.CreatedAt ||
               existing?.createdAt ||
               new Date().toISOString(),
-            saveDir: d.saveDir || d.SaveDir || existing?.saveDir || "",
+            saveDir: d.saveDir || d.SaveDir || parsedDir || existing?.saveDir || "~/Downloads",
             parts: d.parts || existing?.parts || [],
           };
         });

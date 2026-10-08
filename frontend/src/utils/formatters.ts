@@ -29,3 +29,16 @@ export function formatDate(isoStr: string): string {
   const min = d.getMinutes().toString().padStart(2, "0");
   return `${m}-${day} ${h}:${min}`;
 }
+
+export function splitPath(fullPath: string): {filename: string; dir: string} {
+  if (!fullPath) return { filename: "download", dir: ""}
+  const normalized = fullPath.replace(/\\/g, "/")
+  const lastSlash = normalized.lastIndexOf("/")
+  if (lastSlash === -1 ) {
+    return {filename: fullPath, dir: ""}
+  }
+  return {
+    filename: normalized.slice(lastSlash + 1),
+    dir: normalized.slice(0, lastSlash)
+  }
+}

@@ -16,8 +16,10 @@ func main() {
 	app := NewApp()
 	err := wails.Run(&options.App{
 		Title:  "Downstream",
-		Width:  1080,
-		Height: 720,
+		Width:  1024,
+		Height: 680,
+		MinWidth: 900,
+		MinHeight: 540,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
