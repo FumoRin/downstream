@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+:root {
+  color-scheme: dark;
+}
+
 .btn-icon {
   @apply h-7 w-7 rounded flex items-center justify-center bg-tokyo-bgSurface text-tokyo-textSub border border-tokyo-border hover:bg-tokyo-bgHover hover:text-tokyo-textMain disabled:opacity-40 disabled:pointer-events-none transition-colors;
 }
@@ -36,4 +40,14 @@ body {
   font-family: var(--font-sans, system-ui, sans-serif);
   overflow: hidden;
   user-select: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }

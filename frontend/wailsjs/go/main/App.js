@@ -22,10 +22,18 @@ export function ResumeDownload(arg1) {
   return window['go']['main']['App']['ResumeDownload'](arg1);
 }
 
+export function SelectDirectory() {
+  return window['go']['main']['App']['SelectDirectory']();
+}
+
 export function StartDownload(arg1, arg2, arg3) {
   return window['go']['main']['App']['StartDownload'](arg1, arg2, arg3);
 }
 
 export function StopDownload(arg1) {
   return window['go']['main']['App']['StopDownload'](arg1);
+}
+
+export function UpdateSettings(arg1) {
+  return window['go']['main']['App']['UpdateSettings'](arg1);
 }

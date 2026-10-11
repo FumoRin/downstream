@@ -118,6 +118,7 @@ type DownloadRepository interface {
 	GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error)
 	GetCategories() ([]*Category, error)
 	GetAllSettings() (*Settings, error)
+	SetSettings(key, value string) error
 }
 
 type TargetInfo struct {

@@ -378,6 +378,12 @@ func (m *DownloadManager) GetAllDownload() ([]*DownloadState, error) {
 	return states, nil
 }
 
+// UpdateSettings : Update the runtime settings from the frontend
+func(m *DownloadManager) UpdateSettings(s *Settings) {
+	m.settings = s
+}
+
+// populateDownloadProgress : Gives frontend access to the updated download progress
 func (m *DownloadManager) populateDownloadProgress(s *DownloadState) {
 	if s == nil {
 		return

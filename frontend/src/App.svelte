@@ -8,6 +8,7 @@
   import StatusBar from "./components/statusbar/StatusBar.svelte";
   import AddDownloadModal from "./components/header/AddDownloadModal.svelte";
   import DeleteConfirmModal from "./components/table/DeleteConfirmModal.svelte";
+  import SettingsModal from "./components/modals/SettingsModal.svelte";
 
   import { splitPath } from "./utils/formatters";
 
@@ -37,6 +38,7 @@
   let sortField = $state<SortField>("createdAt");
   let sortOrder = $state<SortOrder>("desc");
   let isAddModalOpen = $state(false);
+  let isSettingsModalOpen = $state(false);
 
   // Delete Confirmation Modal State
   let isDeleteModalOpen = $state(false);
@@ -390,6 +392,7 @@
       {counts}
       onSelectFilter={(f) => (activeFilter = f)}
       onOpenModal={() => (isAddModalOpen = true)}
+      onOpenSettings={() => (isSettingsModalOpen = true)}
     />
     <main class="flex flex-1 flex-col min-w-0 bg-tokyo-bgBase overflow-hidden">
       <DownloadTable
@@ -428,4 +431,6 @@
     items={pendingDeleteItems}
     onConfirm={handleConfirmDelete}
   />
+
+  <SettingsModal bind:open={isSettingsModalOpen} />
 </div>

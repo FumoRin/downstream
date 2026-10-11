@@ -23,6 +23,7 @@
     };
     onSelectFilter?: (filter: FilterState) => void;
     onOpenModal?: () => void;
+    onOpenSettings?: () => void;
   }
 
   let {
@@ -38,6 +39,7 @@
     },
     onSelectFilter,
     onOpenModal,
+    onOpenSettings,
   }: Props = $props();
 
   const statusItem = [
@@ -100,6 +102,8 @@
         return counts.scheduled;
     }
   }
+
+
 </script>
 
 <aside
@@ -184,6 +188,7 @@
   <div class="pt-2 border-t border-tokyo-borderSubtle">
     <button
       type="button"
+      onclick={onOpenSettings}
       class="w-full h-8 px-2 rounded flex items-center gap-2 text-xs text-tokyo-textMuted hover:text-tokyo-textMain hover:bg-tokyo-bgSurface/50 transition-colors"
       title="settings"
     >

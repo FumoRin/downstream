@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/fumorin/downstream/internal/downloader"
@@ -110,4 +111,56 @@ func (a *App) GetAllDownloads() ([]*downloader.DownloadState, error) {
 
 func (a *App) GetSettings() (*downloader.Settings, error) {
 	return a.repo.GetAllSettings()
+}
+
+func (a *App) UpdateSettings(settings downloader.Settings) error {
+	if a.repo == nil {
+		return fmt.Errorf("repository not initialize")
+	}
+
+	if settings.DownloadDir != "" {
+		if err := a.repo.SetSettings("download_dir", settings.DownloadDir); err != nil {
+			return err
+		}
+	}
+
+	if settings.MaxConcurrencyDownload != 0 {
+		if err := a.repo.SetSettings("max_concurrent_download", strconv.Itoa(settings.MaxConcurrencyDownload)); err != nil {
+			return err
+		}
+	}
+
+	if settings.PartsPerDownload != 0 {
+		if err := a.repo.SetSettings("per_part_download", strconv.Itoa(settings.PartsPerDownload)); err != nil {
+			return err
+		}
+	}
+
+	if settings.MinMultiPartDownload != 0 {
+		if err := a.repo.SetSettings("min_multi_part_size", strconv.FormatInt(settings.MinMultiPartDownload, 10)); err != nil {
+			return err
+		}
+	}
+
+	a.settings = settings
+	if a.manager != nil {
+		a.manager.UpdateSettings(&settings)
+	}
+	return nil
+}
+
+func (a *App) SelectDirectory() (string, error) {
+	defaultDir := a.settings.DownloadDir
+	if defaultDir == "" {
+		home, _ := os.UserHomeDir()
+		defaultDir = filepath.Join(home, "Downloads")
+	}
+	selected, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		DefaultDirectory: defaultDir,
+		Title:            "Select Download Directory",
+	})
+	if err != nil {
+		return "", err
+	}
+	return selected, nil
 }
