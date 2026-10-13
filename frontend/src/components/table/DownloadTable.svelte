@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import {
     CaretUpIcon,
     CaretDownIcon,
     PlayIcon,
     PauseIcon,
     TrashIcon,
+    ColumnsIcon,
+    CheckIcon,
   } from "phosphor-svelte";
   import type {
     DownloadItem,
@@ -18,7 +21,7 @@
     formatETA,
     formatDate,
   } from "../../utils/formatters";
-    import { cn } from "../../utils/cn";
+  import { cn } from "../../utils/cn";
 
   interface Props {
     items: DownloadItem[];
@@ -51,6 +54,54 @@
     onOpenFile,
     onUnfocus,
   }: Props = $props();
+
+  const STORAGE_KEY = "downstream_table_columns";
+
+  // Optional column visibility
+  let showDateAdded = $state(false);
+  let showCategory = $state(false);
+  let isColumnsMenuOpen = $state(false);
+
+  onMount(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        showDateAdded = !!parsed.dateAdded;
+        showCategory = !!parsed.category;
+      }
+    } catch (e) {
+      console.error("Failed to load table column preferences:", e);
+    }
+  });
+
+  function toggleColumn(col: "dateAdded" | "category") {
+    if (col === "dateAdded") showDateAdded = !showDateAdded;
+    if (col === "category") showCategory = !showCategory;
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          dateAdded: showDateAdded,
+          category: showCategory,
+        }),
+      );
+    } catch (e) {
+      console.error("Failed to save table column preferences:", e);
+    }
+  }
+
+  function handleWindowClick() {
+    if (isColumnsMenuOpen) {
+      isColumnsMenuOpen = false;
+    }
+  }
+
+  function handleWindowKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape" && isColumnsMenuOpen) {
+      isColumnsMenuOpen = false;
+    }
+  }
 
   const isAllSelected = $derived(
     items.length > 0 && items.every((d) => selectedIds.has(d.id)),
@@ -114,6 +165,8 @@
   }
 </script>
 
+<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
+
 <!-- Outer Container with background click to unfocus -->
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div
@@ -123,6 +176,10 @@
   <table class="w-full table-fixed border-collapse text-left text-xs font-sans">
     <thead
       class="sticky top-0 z-10 bg-tokyo-bgDark border-b border-tokyo-borderSubtle text-tokyo-textMuted uppercase text-[10px] tracking-wider"
+      oncontextmenu={(e) => {
+        e.preventDefault();
+        isColumnsMenuOpen = true;
+      }}
     >
       <tr>
         {#if multiSelectMode}
@@ -152,22 +209,24 @@
           </div>
         </th>
 
-        <th
-          class="w-24 th-header hidden xl:table-cell"
-          onclick={() => onSortChange?.("category")}
-        >
-          <div class="flex items-center gap-1">
-            <span>Category</span>
-            {#if sortField === "category"}
-              {#if sortOrder === "asc"}<CaretUpIcon
-                  size={12}
-                />{:else}<CaretDownIcon size={12} />{/if}
-            {/if}
-          </div>
-        </th>
+        {#if showCategory}
+          <th
+            class="w-24 th-header"
+            onclick={() => onSortChange?.("category")}
+          >
+            <div class="flex items-center gap-1">
+              <span>Category</span>
+              {#if sortField === "category"}
+                {#if sortOrder === "asc"}<CaretUpIcon
+                    size={12}
+                  />{:else}<CaretDownIcon size={12} />{/if}
+              {/if}
+            </div>
+          </th>
+        {/if}
 
         <th
-          class="w-24 th-header"
+          class="w-20 th-header"
           onclick={() => onSortChange?.("totalSize")}
         >
           <div class="flex items-center gap-1">
@@ -181,7 +240,7 @@
         </th>
 
         <th
-          class="w-36 th-header"
+          class="w-32 th-header"
           onclick={() => onSortChange?.("percentage")}
         >
           <div class="flex items-center gap-1">
@@ -195,7 +254,7 @@
         </th>
 
         <th
-          class="w-24 th-header"
+          class="w-20 th-header"
           onclick={() => onSortChange?.("speed")}
         >
           <div class="flex items-center gap-1">
@@ -209,7 +268,7 @@
         </th>
 
         <th
-          class="w-16 th-header hidden lg:table-cell"
+          class="w-16 th-header"
           onclick={() => onSortChange?.("eta")}
         >
           <div class="flex items-center gap-1">
@@ -223,7 +282,7 @@
         </th>
 
         <th
-          class="w-24 th-header"
+          class="w-28 th-header pr-4"
           onclick={() => onSortChange?.("status")}
         >
           <div class="flex items-center gap-1">
@@ -236,21 +295,74 @@
           </div>
         </th>
 
-        <th
-          class="w-28 th-header hidden xl:table-cell"
-          onclick={() => onSortChange?.("createdAt")}
-        >
-          <div class="flex items-center gap-1">
-            <span>Date Added</span>
-            {#if sortField === "createdAt"}
-              {#if sortOrder === "asc"}<CaretUpIcon
-                  size={12}
-                />{:else}<CaretDownIcon size={12} />{/if}
-            {/if}
-          </div>
-        </th>
+        {#if showDateAdded}
+          <th
+            class="w-28 th-header"
+            onclick={() => onSortChange?.("createdAt")}
+          >
+            <div class="flex items-center gap-1">
+              <span>Date Added</span>
+              {#if sortField === "createdAt"}
+                {#if sortOrder === "asc"}<CaretUpIcon
+                    size={12}
+                  />{:else}<CaretDownIcon size={12} />{/if}
+              {/if}
+            </div>
+          </th>
+        {/if}
 
-        <th class="w-20 px-3 py-2 text-center">Actions</th>
+        <!-- Actions Column + Column Customizer Button -->
+        <th class="w-22 px-2 py-2 text-center relative select-none">
+          <div class="flex items-center justify-center gap-1">
+            <span>Actions</span>
+            <button
+              type="button"
+              onclick={(e) => {
+                e.stopPropagation();
+                isColumnsMenuOpen = !isColumnsMenuOpen;
+              }}
+              title="Customize columns"
+              class="p-0.5 rounded text-tokyo-textMuted hover:text-tokyo-textMain hover:bg-tokyo-bgSurface transition-colors cursor-pointer"
+            >
+              <ColumnsIcon size={12} />
+            </button>
+          </div>
+
+          <!-- Column Customizer Dropdown Menu -->
+          {#if isColumnsMenuOpen}
+            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+            <div
+              class="absolute right-0 top-full mt-1 w-44 bg-tokyo-bgDark border border-tokyo-border rounded-lg shadow-2xl p-1.5 text-xs text-tokyo-textMain z-50 normal-case tracking-normal text-left font-normal animate-in fade-in zoom-in-95 duration-100"
+              onclick={(e) => e.stopPropagation()}
+            >
+              <div
+                class="px-2 py-1 text-[10px] font-semibold text-tokyo-textMuted uppercase tracking-wider border-b border-tokyo-borderSubtle mb-1"
+              >
+                Table Columns
+              </div>
+              <button
+                type="button"
+                onclick={() => toggleColumn("dateAdded")}
+                class="w-full px-2 py-1.5 rounded flex items-center justify-between text-left hover:bg-tokyo-bgSurface text-tokyo-textSub hover:text-tokyo-textMain transition-colors cursor-pointer"
+              >
+                <span>Date Added</span>
+                {#if showDateAdded}
+                  <CheckIcon size={13} weight="bold" class="text-tokyo-teal" />
+                {/if}
+              </button>
+              <button
+                type="button"
+                onclick={() => toggleColumn("category")}
+                class="w-full px-2 py-1.5 rounded flex items-center justify-between text-left hover:bg-tokyo-bgSurface text-tokyo-textSub hover:text-tokyo-textMain transition-colors cursor-pointer"
+              >
+                <span>Category</span>
+                {#if showCategory}
+                  <CheckIcon size={13} weight="bold" class="text-tokyo-teal" />
+                {/if}
+              </button>
+            </div>
+          {/if}
+        </th>
       </tr>
     </thead>
 
@@ -307,10 +419,9 @@
             </div>
           </td>
 
-          <!-- Category -->
-          <td class="td-cell hidden xl:table-cell"
-            >{item.category || "General"}</td
-          >
+          {#if showCategory}
+            <td class="td-cell">{item.category || "General"}</td>
+          {/if}
 
           <!-- Size -->
           <td class="td-mono"
@@ -319,7 +430,7 @@
 
           <!-- Progress Bar & Percentage -->
           <td class="px-3 py-2.5">
-            <div class="w-28 space-y-1">
+            <div class="w-24 space-y-1">
               <div
                 class="h-1.5 w-full bg-tokyo-bgSurface rounded-full overflow-hidden"
               >
@@ -351,7 +462,7 @@
           </td>
 
           <!-- ETA -->
-          <td class="td-mono-muted hidden lg:table-cell">
+          <td class="td-mono-muted">
             {item.status === 3
               ? "Done"
               : item.status === 1
@@ -360,7 +471,7 @@
           </td>
 
           <!-- Status Badge -->
-          <td class="px-3 py-2.5">
+          <td class="px-3 py-2.5 pr-4">
             <span
               class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium {meta.badgeColor}"
             >
@@ -369,12 +480,11 @@
             </span>
           </td>
 
-          <!-- Date Added -->
-          <td
-            class="td-mono-muted whitespace-nowrap hidden xl:table-cell"
-          >
-            {formatDate(item.createdAt)}
-          </td>
+          {#if showDateAdded}
+            <td class="td-mono-muted whitespace-nowrap">
+              {formatDate(item.createdAt)}
+            </td>
+          {/if}
 
           <!-- Row Action Buttons -->
           <td class="px-3 py-2.5 text-center">
@@ -420,23 +530,20 @@
             </div>
           </td>
         </tr>
-      {:else}
-        <tr>
-          <td
-            colspan="100"
-            class="text-center py-16 text-tokyo-textMuted"
-          >
-            <div class="space-y-1">
-              <p class="text-sm font-medium">No downloads found</p>
-              <p class="text-xs">
-                Add a URL to get started or clear active filters
-              </p>
-            </div>
-          </td>
-        </tr>
       {/each}
     </tbody>
   </table>
+
+  {#if items.length === 0}
+    <div
+      class="py-20 flex flex-col items-center justify-center text-center text-tokyo-textMuted space-y-1"
+    >
+      <p class="text-sm font-medium">No downloads found</p>
+      <p class="text-xs">
+        Add a URL to get started or clear active filters
+      </p>
+    </div>
+  {/if}
 </div>
 
 
