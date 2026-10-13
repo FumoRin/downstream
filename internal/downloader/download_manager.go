@@ -12,19 +12,9 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// StartWorker Start a download worker for each job
+// StartWorker : initializes the worker pool to the initial concurrency
 func (m *DownloadManager) StartWorker(count int) {
-	for range count {
-		go func() {
-			for {
-				job, ok := <-m.job
-				if !ok {
-					return
-				}
-				m.processJob(job)
-			}
-		}()
-	}
+	m.SetConcurrency(count)
 }
 
 // StartDownload Start a Download
@@ -159,6 +149,7 @@ func NewDownloadManager(repo DownloadRepository, settings *Settings) *DownloadMa
 		ctx:           ctx,
 		cancel:        cancel,
 		settings:      settings,
+		retireWorker: make(chan struct{}, 100),
 	}
 }
 
@@ -414,6 +405,58 @@ func (m *DownloadManager) populateDownloadProgress(s *DownloadState) {
 		s.Percentage = (float64(s.CurrentSize) / float64(s.TotalSize)) * 100.0
 		if s.Percentage > 100.0 {
 			s.Percentage = 100.0
+		}
+	}
+}
+
+// SetConcurrency : Dynamically scales the active worker count up and down without needing to restart the program
+func (m *DownloadManager) SetConcurrency(target int) {
+	if target <= 0 {
+		return
+	}
+
+	m.workerMu.Lock()
+	defer m.workerMu.Unlock()
+
+	diff := target - m.workerCount
+	if diff > 0 {
+		// Scaling up: draining the retirement token and then spawn new worker
+		for diff > 0 {
+			select {
+			case <-m.retireWorker:
+				// cancel a pending retirement worker
+				diff--
+			default:
+				// no pending retirement, spawn new worker goroutine
+				go m.workerLoop()
+				diff--
+			}
+		}
+	} else if diff < 0 {
+		// Scaling down: pushing retirement worker to the channel 
+		retireCount := -diff
+		for range retireCount {
+			m.retireWorker <- struct{}{}
+		}
+	}
+
+	m.workerCount = target
+}
+
+// workerLoop: Single worker's execution loop
+func (m *DownloadManager) workerLoop() {
+	for {
+		select {
+		case <-m.ctx.Done():
+			return
+		case <-m.retireWorker:
+			// Gracefully retire this worker
+			return
+		case job, ok := <-m.job:
+			if !ok {
+					return
+			}
+			m.processJob(job)
 		}
 	}
 }

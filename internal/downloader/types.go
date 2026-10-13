@@ -50,6 +50,9 @@ type DownloadManager struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	settings        *Settings
+	workerMu        sync.Mutex
+	workerCount     int
+	retireWorker    chan struct{}
 }
 
 type DownloadState struct {
