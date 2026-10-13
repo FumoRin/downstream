@@ -41,7 +41,7 @@
 <header
   class="h-11.5 bg-tokyo-bgDark border-b border-tokyo-borderSubtle px-4 flex items-center gap-3 shrink-0 z-10"
 >
-  <div class="w-47 flex items-center gap-2.5 mr-2">
+  <div class="w-47 flex items-center gap-2.5 mr-2 shrink-0">
     <!-- Need to be replaced with actual icons later -->
     <div
       class="w-6 h-6 rounded bg-tokyo-teal text-tokyo-bgDark font-black text-xs flex items-center justify-center shadow-md"
@@ -53,7 +53,7 @@
     >
   </div>
 
-  <div class="flex items-center gap-1.5">
+  <div class="flex items-center gap-1.5 shrink-0">
     <button
       type="button"
       onclick={onToggleMultiSelect}
@@ -123,7 +123,7 @@
       </div>
     {/if}
   </div>
-  <div class="ml-auto relative flex items-center w-60">
+  <div class="ml-auto relative flex items-center w-36 sm:w-48 lg:w-60 min-w-[120px] shrink transition-all">
     <MagnifyingGlassIcon size="13" class="absolute left-2.5 text-tokyo-textMuted pointer-events-none" />
     <input 
       type="text" 
