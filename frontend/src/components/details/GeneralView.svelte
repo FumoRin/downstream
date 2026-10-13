@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CopyIcon, CheckIcon } from "phosphor-svelte";
+  import { CopyIcon, CheckIcon, CalendarBlankIcon } from "phosphor-svelte";
   import type { DownloadItem } from "../../types/download";
   import FileTypeIcon from "../table/FileTypeIcons.svelte";
   import MiniSpeedGraph from "./MiniSpeedGraph.svelte";
@@ -95,23 +95,32 @@
       </span>
     </div>
 
-    <!-- Row 2: Destination Path with Inline Copy -->
+    <!-- Row 2: Destination Path + Date Added -->
     <div
-      class="flex items-center gap-1.5 text-xs text-tokyo-textMuted font-mono"
+      class="flex items-center gap-2.5 text-xs text-tokyo-textMuted font-mono min-w-0"
     >
-      <span class="truncate">{item.saveDir || "~/Downloads"}</span>
-      <button
-        type="button"
-        onclick={() => copyToClipboard(item.saveDir || "~/Downloads", "path")}
-        title="Copy download path"
-        class="hover:text-tokyo-textMain p-0.5 rounded transition-colors"
-      >
-        {#if copiedPath}
-          <CheckIcon size={12} class="text-tokyo-green" />
-        {:else}
-          <CopyIcon size={12} />
-        {/if}
-      </button>
+      <div class="flex items-center gap-1 min-w-0 truncate">
+        <span class="truncate">{item.saveDir || "~/Downloads"}</span>
+        <button
+          type="button"
+          onclick={() => copyToClipboard(item.saveDir || "~/Downloads", "path")}
+          title="Copy download path"
+          class="hover:text-tokyo-textMain p-0.5 rounded transition-colors shrink-0"
+        >
+          {#if copiedPath}
+            <CheckIcon size={12} class="text-tokyo-green" />
+          {:else}
+            <CopyIcon size={12} />
+          {/if}
+        </button>
+      </div>
+
+      <span class="text-tokyo-borderSubtle shrink-0">•</span>
+
+      <div class="flex items-center gap-1 shrink-0 text-tokyo-textSub text-[11px]">
+        <CalendarBlankIcon size={12} class="text-tokyo-purple" />
+        <span>Added: {formatDate(item.createdAt)}</span>
+      </div>
     </div>
 
     <!-- Row 3: Progress Bar -->
@@ -133,21 +142,21 @@
     <div
       class="text-[11px] font-mono text-tokyo-textSub flex items-center gap-2 truncate"
     >
-      <span
-        >Downloaded: <strong class="text-tokyo-textMain"
+      <span class="shrink-0">
+        Downloaded: <strong class="text-tokyo-textMain"
           >{formatBytes(item.currentSize || 0)}</strong
-        > / {formatBytes(item.totalSize)}</span
-      >
-      <span class="text-tokyo-textMuted">•</span>
-      <span
-        >Speed: <strong class="text-tokyo-teal"
+        > / {formatBytes(item.totalSize)}
+      </span>
+      <span class="text-tokyo-textMuted hidden xl:inline">•</span>
+      <span class="hidden xl:inline shrink-0">
+        Speed: <strong class="text-tokyo-teal"
           >{item.status === 1 ? formatSpeed(item.speed) : "-"}</strong
-        ></span
-      >
-      <span class="text-tokyo-textMuted">•</span>
-      <span>ETA: {item.status === 3 ? "Done" : formatETA(item.eta)}</span>
-      <span class="text-tokyo-textMuted">•</span>
-      <span>Added: {formatDate(item.createdAt)}</span>
+        >
+      </span>
+      <span class="text-tokyo-textMuted hidden xl:inline">•</span>
+      <span class="hidden xl:inline shrink-0">
+        ETA: {item.status === 3 ? "Done" : formatETA(item.eta)}
+      </span>
     </div>
 
     <!-- Row 5: File URL (Truncated at end with copy button) -->
@@ -155,9 +164,9 @@
     <div
       class="flex items-center gap-1.5 text-[11px] font-mono text-tokyo-textMuted min-w-0"
     >
-      <span>File:</span>
+      <span class="shrink-0">File:</span>
       <span
-        class="text-tokyo-cyan hover:underline cursor-pointer truncate max-w-[450px]"
+        class="text-tokyo-cyan hover:underline cursor-pointer truncate max-w-[260px] sm:max-w-[360px] lg:max-w-[450px]"
         title={item.url}
         onclick={() => copyToClipboard(item.url, "url")}
       >
@@ -167,7 +176,7 @@
         type="button"
         onclick={() => copyToClipboard(item.url, "url")}
         title="Copy URL"
-        class="hover:text-tokyo-textMain p-0.5 rounded transition-colors"
+        class="hover:text-tokyo-textMain p-0.5 rounded transition-colors shrink-0"
       >
         {#if copiedUrl}
           <CheckIcon size={12} class="text-tokyo-green" />
