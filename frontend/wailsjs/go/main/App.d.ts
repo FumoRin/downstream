@@ -6,6 +6,8 @@ export function DeleteDownload(arg1:string,arg2:boolean):Promise<void>;
 
 export function GetAllDownloads():Promise<Array<downloader.DownloadState>>;
 
+export function GetDiskStorage():Promise<downloader.DiskStorage>;
+
 export function GetSettings():Promise<downloader.Settings>;
 
 export function ProbeURL(arg1:string):Promise<downloader.TargetInfo>;

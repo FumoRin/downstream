@@ -1,5 +1,19 @@
 export namespace downloader {
 	
+	export class DiskStorage {
+	    free: number;
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DiskStorage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.free = source["free"];
+	        this.total = source["total"];
+	    }
+	}
 	export class DownloadState {
 	    id: string;
 	    url: string;

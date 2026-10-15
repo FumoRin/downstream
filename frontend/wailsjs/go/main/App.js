@@ -10,6 +10,10 @@ export function GetAllDownloads() {
   return window['go']['main']['App']['GetAllDownloads']();
 }
 
+export function GetDiskStorage() {
+  return window['go']['main']['App']['GetDiskStorage']();
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }

@@ -164,3 +164,35 @@ func (a *App) SelectDirectory() (string, error) {
 	}
 	return selected, nil
 }
+
+func (a *App) GetDiskStorage() (*downloader.DiskStorage, error) {
+	dir := a.settings.DownloadDir
+	if dir == "" {
+		home, _ := os.UserHomeDir()
+		dir = filepath.Join(home, "Downloads")
+	}
+
+	checkDir := dir
+	for checkDir != "" && checkDir != "." {
+		if _, err := os.Stat(checkDir); err == nil {
+			break
+		}
+		parent := filepath.Dir(checkDir)
+		if parent == checkDir {
+			break
+		}
+		checkDir = parent
+	}
+	if checkDir == "" {
+		checkDir = "."
+	}
+
+	free, total, err := getDiskSpace(checkDir)
+	if err != nil {
+		return nil, err
+	}
+	return &downloader.DiskStorage{
+		Free:  free,
+		Total: total,
+	}, nil
+}

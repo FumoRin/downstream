@@ -142,3 +142,8 @@ type Category struct {
 	FolderPath string
 	Extension  []string
 }
+
+type DiskStorage struct {
+	Free  uint64 `json:"free"`
+	Total uint64 `json:"total"`
+}
