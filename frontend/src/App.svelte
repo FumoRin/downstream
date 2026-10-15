@@ -19,6 +19,7 @@
     StopDownload,
     ResumeDownload,
     DeleteDownload,
+    GetDiskStorage,
   } from "../wailsjs/go/main/App";
   import { EventsOn } from "../wailsjs/runtime/runtime";
 
@@ -39,6 +40,22 @@
   let sortOrder = $state<SortOrder>("desc");
   let isAddModalOpen = $state(false);
   let isSettingsModalOpen = $state(false);
+
+  // Status Bar State
+  let showStatusBar = $state(
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("downstream_show_statusbar") !== "false"
+      : true,
+  );
+  let sessionDownloaded = $state(0);
+  let previousSizes = new Map<string, number>();
+  let diskStorage = $state<{ free: number; total: number } | null>(null);
+
+  let aggregateSpeed = $derived(
+    downloads
+      .filter((d) => d.status === 1)
+      .reduce((acc, d) => acc + (d.speed || 0), 0),
+  );
 
   // Delete Confirmation Modal State
   let isDeleteModalOpen = $state(false);
@@ -174,9 +191,26 @@
             parts: d.parts || existing?.parts || [],
           };
         });
+
+        for (const d of downloads) {
+          if (!previousSizes.has(d.id)) {
+            previousSizes.set(d.id, d.currentSize);
+          }
+        }
       }
     } catch (e) {
       console.warn("Wails backend not connected or error fetching downloads:", e);
+    }
+  }
+
+  async function fetchDiskStorage() {
+    try {
+      const res = await GetDiskStorage();
+      if (res && typeof res.free === "number" && typeof res.total === "number") {
+        diskStorage = { free: res.free, total: res.total };
+      }
+    } catch (e) {
+      console.warn("Failed to fetch disk storage:", e);
     }
   }
 
@@ -243,6 +277,7 @@
     }
 
     for (const id of toDelete) {
+      previousSizes.delete(id);
       try {
         await DeleteDownload(id, deleteFiles);
       } catch (e) {
@@ -250,6 +285,9 @@
       }
     }
     await loadDownloads();
+    if (deleteFiles) {
+      await fetchDiskStorage();
+    }
   }
 
   async function handleBatchResume() {
@@ -327,6 +365,7 @@
 
   onMount(async () => {
     await loadDownloads();
+    await fetchDiskStorage();
 
     // Stream real-time progress updates from Go backend
     EventsOn("download:progress", (prog: any) => {
@@ -358,6 +397,16 @@
             ? (rawEta > 1e6 ? Math.floor(rawEta / 1e9) : rawEta)
             : 0;
 
+        const targetId = downloads[idx].id;
+        const prevSize = previousSizes.get(targetId) ?? currentSize;
+        if (currentSize > prevSize) {
+          sessionDownloaded += currentSize - prevSize;
+        }
+        previousSizes.set(targetId, currentSize);
+
+        const isCompleted = percentage >= 100;
+        const prevStatus = downloads[idx].status;
+
         downloads[idx] = {
           ...downloads[idx],
           percentage,
@@ -365,8 +414,12 @@
           totalSize,
           speed,
           eta,
-          status: percentage >= 100 ? 3 : 1,
+          status: isCompleted ? 3 : 1,
         };
+
+        if (isCompleted && prevStatus !== 3) {
+          fetchDiskStorage();
+        }
       }
     });
   });
@@ -417,7 +470,16 @@
     </main>
   </div>
 
-  <StatusBar />
+  {#if showStatusBar}
+    <StatusBar
+      {sessionDownloaded}
+      {aggregateSpeed}
+      rateLimitLabel="Unlimited"
+      {diskStorage}
+      activeCount={counts.active}
+      onRefreshDisk={fetchDiskStorage}
+    />
+  {/if}
 
   <!-- Add Download Modal Dialog -->
   <AddDownloadModal
@@ -432,5 +494,9 @@
     onConfirm={handleConfirmDelete}
   />
 
-  <SettingsModal bind:open={isSettingsModalOpen} />
+  <SettingsModal
+    bind:open={isSettingsModalOpen}
+    bind:showStatusBar
+    onSaved={fetchDiskStorage}
+  />
 </div>

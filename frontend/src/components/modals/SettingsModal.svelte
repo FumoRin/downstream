@@ -19,11 +19,17 @@
 
   interface Props {
     open?: boolean;
+    showStatusBar?: boolean;
     onClose?: () => void;
     onSaved?: () => void;
   }
 
-  let { open = $bindable(false), onClose, onSaved }: Props = $props();
+  let {
+    open = $bindable(false),
+    showStatusBar = $bindable(true),
+    onClose,
+    onSaved,
+  }: Props = $props();
 
   // Active Tab
   let activeTab = $state<"downloads" | "about">("downloads");
@@ -33,6 +39,7 @@
   let maxConcurrency = $state(3);
   let partsPerDownload = $state(4);
   let minMultiPartMB = $state(5);
+  let showStatusBarLocal = $state(true);
 
   // Status & Feedback States
   let isLoading = $state(false);
@@ -51,6 +58,7 @@
     isLoading = true;
     errorMsg = "";
     saveSuccess = false;
+    showStatusBarLocal = showStatusBar;
     try {
       const s = await GetSettings();
       if (s) {
@@ -109,6 +117,12 @@
         PartsPerDownload: Number(partsPerDownload),
         MinMultiPartDownload: Number(minMultiPartMB) * 1024 * 1024,
       });
+
+      showStatusBar = showStatusBarLocal;
+      localStorage.setItem(
+        "downstream_show_statusbar",
+        String(showStatusBarLocal),
+      );
 
       saveSuccess = true;
       onSaved?.();
@@ -336,6 +350,30 @@
                 Files smaller than this threshold download as a single chunk
                 without splitting.
               </p>
+            </div>
+
+            <!-- Interface / Appearance Options -->
+            <div class="pt-3 border-t border-tokyo-borderSubtle space-y-2">
+              <span class="text-xs font-medium text-tokyo-textSub block">
+                Interface
+              </span>
+              <label class="flex items-start gap-2.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  bind:checked={showStatusBarLocal}
+                  class="mt-0.5 rounded bg-tokyo-bgSurface border border-tokyo-border text-tokyo-teal focus:ring-0 focus:ring-offset-0 cursor-pointer accent-tokyo-teal"
+                />
+                <div class="flex flex-col">
+                  <span
+                    class="text-xs text-tokyo-textMain group-hover:text-tokyo-teal transition-colors"
+                  >
+                    Show status bar
+                  </span>
+                  <span class="text-[11px] text-tokyo-textMuted leading-tight">
+                    Display session statistics, live bandwidth, disk storage, and connection status at the bottom.
+                  </span>
+                </div>
+              </label>
             </div>
           </form>
         {:else}
