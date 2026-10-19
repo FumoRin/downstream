@@ -254,7 +254,7 @@
         </th>
 
         <th
-          class="w-20 th-header"
+          class="w-24 th-header"
           onclick={() => onSortChange?.("speed")}
         >
           <div class="flex items-center gap-1">
@@ -456,7 +456,7 @@
 
           <!-- Speed -->
           <td
-            class={cn("td-mono", item.status === 1 ? "text-tokyo-teal font-medium" : "text-tokyo-textMuted")}
+            class={cn("td-mono whitespace-nowrap tabular-nums", item.status === 1 ? "text-tokyo-teal font-medium" : "text-tokyo-textMuted")}
           >
             {item.status === 1 ? formatSpeed(item.speed) : "-"}
           </td>

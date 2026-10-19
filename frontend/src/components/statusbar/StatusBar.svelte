@@ -63,28 +63,44 @@
       color: "bg-tokyo-green",
       label: "Connected",
       description:
-        activeCount > 0
-          ? `${activeCount} downloading • ${speedText}`
-          : "Network online",
+        activeCount > 0 ? `${activeCount} downloading` : "Network online",
     };
   });
 </script>
 
 <footer
-  class="h-[26px] bg-tokyo-bgDark border-t border-tokyo-borderSubtle px-3 flex items-center justify-between text-[11px] font-mono select-none overflow-hidden shrink-0 text-tokyo-textMuted"
+  class="h-6.5 bg-tokyo-bgDark border-t border-tokyo-borderSubtle px-3 flex items-center justify-between text-[11px] font-mono select-none shrink-0 text-tokyo-textMuted"
 >
   <!-- Left Telemetry Stats -->
+
   <div class="flex items-center gap-2 min-w-0 truncate">
-    <span class="whitespace-nowrap">
-      Session: <span class="text-tokyo-textSub font-medium">{formatBytes(sessionDownloaded)}</span>
+    <span class="whitespace-nowrap flex items-center">
+      <span>Session:&nbsp;</span>
+      <span
+        class="inline-block min-w-17.5 tabular-nums text-tokyo-textSub font-medium"
+      >
+        {formatBytes(sessionDownloaded)}
+      </span>
     </span>
+
     <span class="text-tokyo-textDark select-none shrink-0">•</span>
-    <span class="whitespace-nowrap">
-      Bandwidth: <span class="text-tokyo-textSub font-medium">{speedText} ↓</span>
+
+    <span class="whitespace-nowrap flex items-center">
+      <span>Bandwidth:&nbsp;</span>
+      <span
+        class="inline-block min-w-23.75 tabular-nums text-tokyo-textSub font-medium"
+      >
+        {speedText} ↓
+      </span>
     </span>
-    <span class="text-tokyo-textDark select-none shrink-0 hidden sm:inline">•</span>
+
+    <span class="text-tokyo-textDark select-none shrink-0 hidden sm:inline"
+      >•</span
+    >
+
     <span class="whitespace-nowrap hidden sm:inline">
-      Limit: <span class="text-tokyo-textSub font-medium">{rateLimitLabel}</span>
+      Limit: <span class="text-tokyo-textSub font-medium">{rateLimitLabel}</span
+      >
     </span>
   </div>
 
@@ -102,13 +118,24 @@
 
     <span class="text-tokyo-textDark select-none">•</span>
 
-    <div
-      class="flex items-center justify-center cursor-help"
-      title="{connectionStatus.label} ({connectionStatus.description})"
-    >
+    <div class="relative group flex items-center justify-center cursor-pointer">
       <span
         class="w-2 h-2 rounded-full {connectionStatus.color} inline-block transition-colors duration-200"
       ></span>
+
+      <!-- Custom Tokyo Night Tooltip -->
+      <div
+        class="pointer-events-none absolute bottom-full mb-1.5 right-0 hidden group-hover:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-tokyo-bgDark border border-tokyo-border text-[11px] font-sans text-
+  tokyo-textSub shadow-2xl whitespace-nowrap z-50 animate-in fade-in zoom-in-95 duration-100"
+      >
+        <span class="w-1.5 h-1.5 rounded-full {connectionStatus.color} shrink-0"
+        ></span>
+        <span class="font-medium text-tokyo-textMain"
+          >{connectionStatus.label}</span
+        >
+        <span class="text-tokyo-textMuted">•</span>
+        <span>{connectionStatus.description}</span>
+      </div>
     </div>
   </div>
 </footer>
