@@ -42,10 +42,16 @@
   let showStatusBarLocal = $state(true);
 
   // Status & Feedback States
+  let initialDownloadDir = $state("");
   let isLoading = $state(false);
   let isSaving = $state(false);
   let errorMsg = $state("");
   let saveSuccess = $state(false);
+
+  // Download Speed limit
+  let isSpeedLimited = $state(false);
+  let speedLimitValue = $state(5);
+  let speedLimitUnit = $state<"MB" | "KB">("MB");
 
   // Load existing settings whenever modal opens
   $effect(() => {
@@ -62,13 +68,44 @@
     try {
       const s = await GetSettings();
       if (s) {
+        initialDownloadDir = s.DownloadDir || "";
         downloadDir = s.DownloadDir || "";
         maxConcurrency = s.MaxConcurrencyDownload || 3;
         partsPerDownload = s.PartsPerDownload || 4;
         minMultiPartMB = Math.max(
           1,
-          Math.round((s.MinMultiPartDownload || 5242880) / (1024 * 1024)),
+          Math.round(s.MinMultiPartDownload || 5242880) / (1024 * 1024),
         );
+
+        const limitBytes = s.SpeedLimit || 0;
+        if (limitBytes > 0) {
+          isSpeedLimited = true;
+          if (limitBytes >= 1024 * 1024 && limitBytes % (1024 * 1024) === 0) {
+            speedLimitValue = limitBytes / (1024 * 1024);
+            speedLimitUnit = "MB";
+          } else {
+            speedLimitValue = Math.round(limitBytes / 1024);
+            speedLimitUnit = "KB";
+          }
+        } else {
+          isSpeedLimited = false;
+          const savedLimit =
+            typeof localStorage !== "undefined"
+              ? Number(localStorage.getItem("downstream_last_speed_limit")) || 0
+              : 0;
+          if (savedLimit > 0) {
+            if (savedLimit >= 1024 * 1024 && savedLimit % (1024 * 1024) === 0) {
+              speedLimitValue = savedLimit / (1024 * 1024);
+              speedLimitUnit = "MB";
+            } else {
+              speedLimitValue = Math.round(savedLimit / 1024);
+              speedLimitUnit = "KB";
+            }
+          } else {
+            speedLimitValue = 5;
+            speedLimitUnit = "MB";
+          }
+        }
       }
     } catch (err: any) {
       errorMsg = err?.message || "Failed to load current settings";
@@ -91,10 +128,12 @@
   async function handleSave(e?: Event) {
     if (e) e.preventDefault();
 
-    if (!downloadDir.trim()) {
+    const finalDownloadDir = downloadDir.trim() || initialDownloadDir;
+    if (!finalDownloadDir) {
       errorMsg = "Default download directory cannot be empty";
       return;
     }
+
     if (maxConcurrency < 1 || maxConcurrency > 10) {
       errorMsg = "Concurrent downloads must be between 1 and 10";
       return;
@@ -108,14 +147,26 @@
       return;
     }
 
+    const calculateSpeedLimit = isSpeedLimited
+      ? Number(speedLimitValue) * (speedLimitUnit === "MB" ? 1024 * 1024 : 1024)
+      : 0;
+
+    if (calculateSpeedLimit > 0) {
+      localStorage.setItem(
+        "downstream_last_speed_limit",
+        String(calculateSpeedLimit),
+      );
+    }
+
     isSaving = true;
     errorMsg = "";
     try {
       await UpdateSettings({
-        DownloadDir: downloadDir.trim(),
+        DownloadDir: finalDownloadDir,
         MaxConcurrencyDownload: Number(maxConcurrency),
         PartsPerDownload: Number(partsPerDownload),
         MinMultiPartDownload: Number(minMultiPartMB) * 1024 * 1024,
+        SpeedLimit: calculateSpeedLimit,
       });
 
       showStatusBar = showStatusBarLocal;
@@ -254,7 +305,6 @@
                   type="text"
                   bind:value={downloadDir}
                   placeholder="/home/user/Downloads"
-                  required
                   class="flex-1 h-9 px-3 rounded bg-tokyo-bgSurface border border-tokyo-border text-xs text-tokyo-textMain font-mono focus:outline-none focus:border-tokyo-teal transition-colors"
                 />
                 <button
@@ -311,13 +361,35 @@
                     bind:value={partsPerDownload}
                     class="w-full h-9 pl-3 pr-8 rounded bg-tokyo-bgSurface border border-tokyo-border text-xs text-tokyo-textMain font-mono appearance-none cursor-pointer focus:outline-none focus:border-tokyo-teal transition-colors"
                   >
-                    <option value={1} class="bg-tokyo-bgDark text-tokyo-textMain">1 (Single Part)</option>
-                    <option value={2} class="bg-tokyo-bgDark text-tokyo-textMain">2 Parts</option>
-                    <option value={4} class="bg-tokyo-bgDark text-tokyo-textMain">4 Parts (Default)</option>
-                    <option value={8} class="bg-tokyo-bgDark text-tokyo-textMain">8 Parts</option>
-                    <option value={16} class="bg-tokyo-bgDark text-tokyo-textMain">16 Parts</option>
+                    <option
+                      value={1}
+                      class="bg-tokyo-bgDark text-tokyo-textMain"
+                      >1 (Single Part)</option
+                    >
+                    <option
+                      value={2}
+                      class="bg-tokyo-bgDark text-tokyo-textMain"
+                      >2 Parts</option
+                    >
+                    <option
+                      value={4}
+                      class="bg-tokyo-bgDark text-tokyo-textMain"
+                      >4 Parts (Default)</option
+                    >
+                    <option
+                      value={8}
+                      class="bg-tokyo-bgDark text-tokyo-textMain"
+                      >8 Parts</option
+                    >
+                    <option
+                      value={16}
+                      class="bg-tokyo-bgDark text-tokyo-textMain"
+                      >16 Parts</option
+                    >
                   </select>
-                  <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-tokyo-textMuted">
+                  <div
+                    class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-tokyo-textMuted"
+                  >
                     <CaretDownIcon size={14} />
                   </div>
                 </div>
@@ -352,6 +424,44 @@
               </p>
             </div>
 
+            <!-- Speed Limit -->
+            <div class="space-y-2 pt-2 border-t border-tokyo-borderSubtle">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  bind:checked={isSpeedLimited}
+                  class="rounded bg-tokyo-bgSurface border border-tokyo-border text-tokyo-teal focus:ring-0 focus:ring-offset-0 cursor-pointer accent-tokyo-teal"
+                />
+                <span class="text-xs font-medium text-tokyo-textSub">
+                  Limit download speed
+                </span>
+              </label>
+
+              {#if isSpeedLimited}
+                <div
+                  class="flex items-center gap-2 pl-5 pt-0.5 animate-in fade-in duration-150"
+                >
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    bind:value={speedLimitValue}
+                    class="w-24 h-8 px-2.5 rounded bg-tokyo-bgSurface border border-tokyo-border text-xs text-tokyo-textMain font-mono focus:outline-none focus:border-tokyo-teal transition-colors"
+                  />
+                  <select
+                    bind:value={speedLimitUnit}
+                    class="h-8 px-2 rounded bg-tokyo-bgSurface border border-tokyo-border text-xs text-tokyo-textMain font-mono cursor-pointer focus:outline-none focus:border-tokyo-teal"
+                  >
+                    <option value="MB" class="bg-tokyo-bgDark">MB/s</option>
+                    <option value="KB" class="bg-tokyo-bgDark">KB/s</option>
+                  </select>
+                </div>
+              {/if}
+              <p class="text-[11px] text-tokyo-textMuted pl-5">
+                Throttle maximum bandwidth across all active downloads.
+              </p>
+            </div>
+
             <!-- Interface / Appearance Options -->
             <div class="pt-3 border-t border-tokyo-borderSubtle space-y-2">
               <span class="text-xs font-medium text-tokyo-textSub block">
@@ -370,7 +480,8 @@
                     Show status bar
                   </span>
                   <span class="text-[11px] text-tokyo-textMuted leading-tight">
-                    Display session statistics, live bandwidth, disk storage, and connection status at the bottom.
+                    Display session statistics, live bandwidth, disk storage,
+                    and connection status at the bottom.
                   </span>
                 </div>
               </label>

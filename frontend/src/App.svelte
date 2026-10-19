@@ -6,11 +6,11 @@
   import DownloadTable from "./components/table/DownloadTable.svelte";
   import DetailsPane from "./components/details/DetailsPane.svelte";
   import StatusBar from "./components/statusbar/StatusBar.svelte";
-  import AddDownloadModal from "./components/header/AddDownloadModal.svelte";
+  import AddDownloadModal from "./components/modals/AddDownloadModal.svelte";
   import DeleteConfirmModal from "./components/table/DeleteConfirmModal.svelte";
   import SettingsModal from "./components/modals/SettingsModal.svelte";
 
-  import { splitPath } from "./utils/formatters";
+  import { formatBytes, splitPath } from "./utils/formatters";
 
   // Wails auto-generated Go bindings
   import {
@@ -20,6 +20,8 @@
     ResumeDownload,
     DeleteDownload,
     GetDiskStorage,
+    GetSettings,
+    UpdateSettings,
   } from "../wailsjs/go/main/App";
   import { EventsOn } from "../wailsjs/runtime/runtime";
 
@@ -96,6 +98,54 @@
       : null,
   );
 
+  // Speed Limit
+  let currentSpeedLimit = $state(0);
+  let lastConfiguredSpeedLimit = $state(
+    typeof localStorage !== "undefined"
+      ? Number(localStorage.getItem("downstream_last_speed_limit")) ||
+          5 * 1024 * 1024
+      : 5 * 1024 * 1024,
+  );
+  let rateLimitLabel = $derived(
+    currentSpeedLimit > 0 ? `${formatBytes(currentSpeedLimit)}/s` : "Unlimited",
+  );
+
+  async function loadSettings() {
+    try {
+      const s = await GetSettings();
+      if (s && typeof s.SpeedLimit === "number") {
+        currentSpeedLimit = s.SpeedLimit;
+        if (s.SpeedLimit > 0) {
+          lastConfiguredSpeedLimit = s.SpeedLimit;
+          localStorage.setItem(
+            "downstream_last_speed_limit",
+            String(s.SpeedLimit),
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load settings:", e);
+    }
+  }
+
+  async function handleToggleSpeedLimit() {
+    const targetLimit =
+      currentSpeedLimit > 0 ? 0 : lastConfiguredSpeedLimit || 5 * 1024 * 1024;
+    try {
+      const current = await GetSettings();
+      await UpdateSettings({
+        DownloadDir: current?.DownloadDir || "",
+        MaxConcurrencyDownload: current?.MaxConcurrencyDownload || 3,
+        PartsPerDownload: current?.PartsPerDownload || 4,
+        MinMultiPartDownload: current?.MinMultiPartDownload || 5 * 1024 * 1024,
+        SpeedLimit: targetLimit,
+      });
+      await loadSettings();
+    } catch (e) {
+      console.error("Failed to toggle speed limit:", e);
+    }
+  }
+
   // Filtered & Sorted downloads list for DownloadTable
   let filteredDownloads = $derived(
     downloads
@@ -145,8 +195,9 @@
         downloads = raw.map((d: any) => {
           const id = d.id || d.ID || "";
           const existing = downloads.find((item) => item.id === id);
-          const rawPath = d.filename || d.Filename || existing?.filename || "download"
-          const {filename: baseName, dir: parsedDir} = splitPath(rawPath)
+          const rawPath =
+            d.filename || d.Filename || existing?.filename || "download";
+          const { filename: baseName, dir: parsedDir } = splitPath(rawPath);
           const rawStatus = (d.status !== undefined ? d.status : d.Status) ?? 0;
           const status =
             existing?.status === 2 && rawStatus === 1 ? 2 : rawStatus;
@@ -155,7 +206,7 @@
           const currentSize =
             (d.currentSize ?? d.CurrentSize) || existing?.currentSize || 0;
           let percentage =
-            (d.percentage ?? d.Percentage) ?? existing?.percentage ?? 0;
+            d.percentage ?? d.Percentage ?? existing?.percentage ?? 0;
 
           if (status === 3) {
             percentage = 100;
@@ -173,13 +224,8 @@
             currentSize,
             percentage,
             speed:
-              status === 1
-                ? (d.speed ?? d.Speed ?? existing?.speed ?? 0)
-                : 0,
-            eta:
-              status === 1
-                ? (d.eta ?? d.ETA ?? existing?.eta ?? 0)
-                : 0,
+              status === 1 ? (d.speed ?? d.Speed ?? existing?.speed ?? 0) : 0,
+            eta: status === 1 ? (d.eta ?? d.ETA ?? existing?.eta ?? 0) : 0,
             status,
             priority: "normal",
             createdAt:
@@ -187,7 +233,12 @@
               d.CreatedAt ||
               existing?.createdAt ||
               new Date().toISOString(),
-            saveDir: d.saveDir || d.SaveDir || parsedDir || existing?.saveDir || "~/Downloads",
+            saveDir:
+              d.saveDir ||
+              d.SaveDir ||
+              parsedDir ||
+              existing?.saveDir ||
+              "~/Downloads",
             parts: d.parts || existing?.parts || [],
           };
         });
@@ -199,14 +250,21 @@
         }
       }
     } catch (e) {
-      console.warn("Wails backend not connected or error fetching downloads:", e);
+      console.warn(
+        "Wails backend not connected or error fetching downloads:",
+        e,
+      );
     }
   }
 
   async function fetchDiskStorage() {
     try {
       const res = await GetDiskStorage();
-      if (res && typeof res.free === "number" && typeof res.total === "number") {
+      if (
+        res &&
+        typeof res.free === "number" &&
+        typeof res.total === "number"
+      ) {
         diskStorage = { free: res.free, total: res.total };
       }
     } catch (e) {
@@ -321,7 +379,9 @@
 
   function handleToggleSelect(id: string, isMulti: boolean, isShift: boolean) {
     if (isShift && lastClickedId && lastClickedId !== id) {
-      const fromIdx = filteredDownloads.findIndex((d) => d.id === lastClickedId);
+      const fromIdx = filteredDownloads.findIndex(
+        (d) => d.id === lastClickedId,
+      );
       const toIdx = filteredDownloads.findIndex((d) => d.id === id);
       if (fromIdx !== -1 && toIdx !== -1) {
         const [start, end] =
@@ -364,6 +424,7 @@
   }
 
   onMount(async () => {
+    await loadSettings();
     await loadDownloads();
     await fetchDiskStorage();
 
@@ -374,11 +435,10 @@
       const idx = downloads.findIndex(
         (d) =>
           (progId && d.id === progId) ||
-          (progFilename && (
-            d.filename === progFilename ||
-            progFilename.endsWith(d.filename) ||
-            d.filename.endsWith(progFilename)
-          )),
+          (progFilename &&
+            (d.filename === progFilename ||
+              progFilename.endsWith(d.filename) ||
+              d.filename.endsWith(progFilename))),
       );
       if (idx !== -1) {
         // If download was paused by the user, ignore late in-flight progress packets
@@ -394,7 +454,9 @@
         const rawEta = prog.eta ?? prog.ETA ?? 0;
         const eta =
           typeof rawEta === "number"
-            ? (rawEta > 1e6 ? Math.floor(rawEta / 1e9) : rawEta)
+            ? rawEta > 1e6
+              ? Math.floor(rawEta / 1e9)
+              : rawEta
             : 0;
 
         const targetId = downloads[idx].id;
@@ -432,6 +494,10 @@
     bind:multiSelectMode
     bind:searchQuery
     selectedCount={selectedIds.size}
+    isSpeedLimited={currentSpeedLimit > 0}
+    speedLimitLabel={currentSpeedLimit > 0 ? `${formatBytes(currentSpeedLimit)}/s` : "Speed Limit: Off"}
+    onToggleSpeedLimit={handleToggleSpeedLimit}
+    onOpenSpeedLimit={() => (isSettingsModalOpen = true)}
     onClearSelection={unfocus}
     onToggleMultiSelect={() => (multiSelectMode = !multiSelectMode)}
     onResume={handleBatchResume}
@@ -463,10 +529,7 @@
         onDelete={(id) => requestDelete([id])}
         onOpenFile={(item) => console.log("Open file:", item.filename)}
       />
-      <DetailsPane
-        {selectedItem}
-        selectedCount={selectedIds.size}
-      />
+      <DetailsPane {selectedItem} selectedCount={selectedIds.size} />
     </main>
   </div>
 
@@ -474,7 +537,7 @@
     <StatusBar
       {sessionDownloaded}
       {aggregateSpeed}
-      rateLimitLabel="Unlimited"
+      {rateLimitLabel}
       {diskStorage}
       activeCount={counts.active}
       onRefreshDisk={fetchDiskStorage}
@@ -482,10 +545,7 @@
   {/if}
 
   <!-- Add Download Modal Dialog -->
-  <AddDownloadModal
-    bind:open={isAddModalOpen}
-    onSubmit={handleAddDownload}
-  />
+  <AddDownloadModal bind:open={isAddModalOpen} onSubmit={handleAddDownload} />
 
   <!-- Delete Confirmation Modal Dialog -->
   <DeleteConfirmModal
@@ -497,6 +557,9 @@
   <SettingsModal
     bind:open={isSettingsModalOpen}
     bind:showStatusBar
-    onSaved={fetchDiskStorage}
+    onSaved={async () => {
+      await fetchDiskStorage();
+      await loadSettings();
+    }}
   />
 </div>

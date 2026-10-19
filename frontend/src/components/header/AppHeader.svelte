@@ -20,6 +20,7 @@
     onPause?: () => void;
     onDelete?: () => void;
     onClearSelection?: () => void;
+    onToggleSpeedLimit?: () => void;
     onOpenSpeedLimit?: () => void;
   }
 
@@ -34,6 +35,7 @@
     onPause,
     onDelete,
     onClearSelection,
+    onToggleSpeedLimit,
     onOpenSpeedLimit,
   }: Props = $props();
 </script>
@@ -97,10 +99,12 @@
 
     <button
       type="button"
-      onclick={onOpenSpeedLimit}
-      title="Configure Bandwidth Limit"
-      class="h-7 px-2.5 rounded text-xs font-mono flex items-center gap-1.5 border transition-colors {isSpeedLimited
-        ? 'bg-tokyo-yellow/15 text-tokyo-yellow border-tokyo-yellow/40'
+      onclick={onToggleSpeedLimit ?? onOpenSpeedLimit}
+      title={isSpeedLimited
+        ? "Click to disable speed limit"
+        : "Click to enable speed limit"}
+      class="h-7 px-2.5 rounded text-xs font-mono flex items-center gap-1.5 border transition-colors cursor-pointer {isSpeedLimited
+        ? 'bg-tokyo-yellow/15 text-tokyo-yellow border-tokyo-yellow/40 hover:bg-tokyo-yellow/25'
         : 'bg-tokyo-bgSurface text-tokyo-textSub border-tokyo-border hover:bg-tokyo-bgHover hover:text-tokyo-textMain'}"
     >
       <LightningIcon size="13" />
