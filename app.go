@@ -142,6 +142,12 @@ func (a *App) UpdateSettings(settings downloader.Settings) error {
 		}
 	}
 
+	if settings.SpeedLimit >= 0 {
+		if err := a.repo.SetSettings("speed_limit", strconv.FormatInt(settings.SpeedLimit, 10)); err != nil {
+			return err
+		}
+	}
+
 	a.settings = settings
 	if a.manager != nil {
 		a.manager.UpdateSettings(&settings)

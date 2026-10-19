@@ -20,8 +20,10 @@ func (m *DownloadManager) StartWorker(count int) {
 // StartDownload Start a Download
 func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, limiters ...*rate.Limiter) {
 	var limiter *rate.Limiter
-	if len(limiters) > 0 {
+	if len(limiters) > 0  && limiters[0] != nil {
 		limiter = limiters[0]
+	} else {
+		limiter = m.limiter
 	}
 
 	state, err := m.repo.GetDownload(generatedID)
@@ -51,7 +53,7 @@ func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, 
 		m.wg.Done()
 		return
 
-	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Dir: dir,Limiter: limiter}:
+	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Dir: dir, Limiter: limiter}:
 		return
 	}
 }
@@ -141,6 +143,12 @@ func (m *DownloadManager) DeleteDownload(id string, deleteFiles bool) error {
 
 func NewDownloadManager(repo DownloadRepository, settings *Settings) *DownloadManager {
 	ctx, cancel := context.WithCancel(context.Background())
+	var lim *rate.Limiter
+	if settings != nil && settings.SpeedLimit > 0 {
+		lim = rate.NewLimiter(rate.Limit(settings.SpeedLimit), 64*1024)
+	} else {
+		lim = rate.NewLimiter(rate.Inf, 0)
+	}
 	return &DownloadManager{
 		job:           make(chan DownloadJob, 1000),
 		progress:      make(chan Progress),
@@ -149,7 +157,8 @@ func NewDownloadManager(repo DownloadRepository, settings *Settings) *DownloadMa
 		ctx:           ctx,
 		cancel:        cancel,
 		settings:      settings,
-		retireWorker: make(chan struct{}, 100),
+		retireWorker:  make(chan struct{}, 100),
+		limiter:       lim,
 	}
 }
 
@@ -256,11 +265,11 @@ func (m *DownloadManager) ScheduleDownload(id, url, customFilename string, ctx c
 	}
 
 	state := &DownloadState{
-		ID: id,
-		URL: url,
-		Filename: resolvedFilename,
-		TotalSize: totalSize,
-		Status: StateScheduled,
+		ID:          id,
+		URL:         url,
+		Filename:    resolvedFilename,
+		TotalSize:   totalSize,
+		Status:      StateScheduled,
 		ScheduledAt: &scheduledAt,
 	}
 
@@ -279,7 +288,7 @@ func (m *DownloadManager) StartScheduler(interval time.Duration) {
 		for {
 			select {
 			case <-m.ctx.Done():
-				return 
+				return
 			case <-ticker.C:
 				m.checkScheduledDownloads()
 			}
@@ -290,11 +299,11 @@ func (m *DownloadManager) StartScheduler(interval time.Duration) {
 func (m *DownloadManager) checkScheduledDownloads() {
 	due, err := m.repo.GetDueScheduledDownloads(time.Now())
 	if err != nil || len(due) == 0 {
-		return 
+		return
 	}
 
 	for _, item := range due {
-		m.StartDownload(item.ID, item.URL, item.Filename, "",  nil)
+		m.StartDownload(item.ID, item.URL, item.Filename, "", nil)
 	}
 }
 
@@ -310,7 +319,6 @@ func (m *DownloadManager) Probe(ctx context.Context, url, customFilename string)
 
 	return probeServerSupport(ctx, client, url, opts)
 }
-
 
 // === Public API & Lifecycle ===
 
@@ -331,7 +339,7 @@ func (m *DownloadManager) Wait() {
 }
 
 // ProgressChan : Passing ProgressChan for Read-Only Access on Progress channel
-func (m *DownloadManager) ProgressChan() <- chan Progress {
+func (m *DownloadManager) ProgressChan() <-chan Progress {
 	return m.progress
 }
 
@@ -370,8 +378,21 @@ func (m *DownloadManager) GetAllDownload() ([]*DownloadState, error) {
 }
 
 // UpdateSettings : Update the runtime settings from the frontend
-func(m *DownloadManager) UpdateSettings(s *Settings) {
+func (m *DownloadManager) UpdateSettings(s *Settings) {
 	m.settings = s
+	if s != nil {
+		if m.limiter != nil {
+			if s.SpeedLimit > 0 {
+				m.limiter.SetLimit(rate.Limit(s.SpeedLimit))
+				m.limiter.SetBurst(64 * 1024)
+			} else {
+				m.limiter.SetLimit(rate.Limit(rate.Inf))
+			}
+		}
+		if s.MaxConcurrencyDownload > 0 {
+			m.SetConcurrency(s.MaxConcurrencyDownload)
+		}
+	}
 }
 
 // populateDownloadProgress : Gives frontend access to the updated download progress
@@ -433,7 +454,7 @@ func (m *DownloadManager) SetConcurrency(target int) {
 			}
 		}
 	} else if diff < 0 {
-		// Scaling down: pushing retirement worker to the channel 
+		// Scaling down: pushing retirement worker to the channel
 		retireCount := -diff
 		for range retireCount {
 			m.retireWorker <- struct{}{}
@@ -454,7 +475,7 @@ func (m *DownloadManager) workerLoop() {
 			return
 		case job, ok := <-m.job:
 			if !ok {
-					return
+				return
 			}
 			m.processJob(job)
 		}

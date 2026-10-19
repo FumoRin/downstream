@@ -53,6 +53,7 @@ type DownloadManager struct {
 	workerMu        sync.Mutex
 	workerCount     int
 	retireWorker    chan struct{}
+	limiter         *rate.Limiter
 }
 
 type DownloadState struct {
@@ -135,6 +136,7 @@ type Settings struct {
 	MaxConcurrencyDownload int
 	PartsPerDownload       int
 	MinMultiPartDownload   int64
+	SpeedLimit	int64
 }
 
 type Category struct {

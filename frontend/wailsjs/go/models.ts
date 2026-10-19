@@ -66,6 +66,7 @@ export namespace downloader {
 	    MaxConcurrencyDownload: number;
 	    PartsPerDownload: number;
 	    MinMultiPartDownload: number;
+	    SpeedLimit: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -77,6 +78,7 @@ export namespace downloader {
 	        this.MaxConcurrencyDownload = source["MaxConcurrencyDownload"];
 	        this.PartsPerDownload = source["PartsPerDownload"];
 	        this.MinMultiPartDownload = source["MinMultiPartDownload"];
+	        this.SpeedLimit = source["SpeedLimit"];
 	    }
 	}
 	export class TargetInfo {

@@ -305,6 +305,10 @@ func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
 			if n, err := strconv.ParseInt(val, 10, 64); err == nil && n > 0 {
 				settings.MinMultiPartDownload = n
 			}
+		case "speed_limit":
+			if n, err := strconv.ParseInt(val, 10, 64); err == nil && n >= 0 {
+				settings.SpeedLimit = n
+			}
 		}
 	}
 
