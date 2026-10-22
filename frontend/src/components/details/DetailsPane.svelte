@@ -20,7 +20,7 @@
 </script>
 
 <div
-  class="bg-tokyo-bgDark border-t border-tokyo-borderSubtle flex flex-col shrink-0 transition-all duration-200 select-none {isCollapsed
+  class="bg-tokyo-bgDark border-t border-tokyo-borderSubtle flex flex-col shrink-0 transition-[height] duration-200 ease-out select-none {isCollapsed
     ? 'h-8'
     : 'h-[195px]'}"
 >

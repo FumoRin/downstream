@@ -435,7 +435,7 @@
                 class="h-1.5 w-full bg-tokyo-bgSurface rounded-full overflow-hidden"
               >
                 <div
-                  class="h-full rounded-full transition-all duration-200 {meta.barColor}"
+                  class="h-full rounded-full transition-[width] duration-150 ease-out {meta.barColor}"
                   style="width: {item.status === 3
                     ? 100
                     : item.percentage || 0}%"

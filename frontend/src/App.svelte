@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
   import AppHeader from "./components/header/AppHeader.svelte";
   import Sidebar from "./components/sidebar/Sidebar.svelte";
@@ -423,65 +423,99 @@
     lastClickedId = null;
   }
 
+  let animationFrameId: number | null = null;
+
+  onDestroy(() => {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+    }
+  });
+
   onMount(async () => {
     await loadSettings();
     await loadDownloads();
     await fetchDiskStorage();
 
-    // Stream real-time progress updates from Go backend
+    // Stream real-time progress updates from Go backend (batched via requestAnimationFrame)
+    const pendingProgressQueue = new Map<string, any>();
+
+    function flushProgressUpdates() {
+      animationFrameId = null;
+      if (pendingProgressQueue.size === 0) return;
+
+      let hasCompleted = false;
+      const updates = Array.from(pendingProgressQueue.values());
+      pendingProgressQueue.clear();
+
+      for (const prog of updates) {
+        const progId = prog.id || prog.ID || "";
+        const progFilename = prog.filename || prog.Filename || "";
+        const idx = downloads.findIndex(
+          (d) =>
+            (progId && d.id === progId) ||
+            (progFilename &&
+              (d.filename === progFilename ||
+                progFilename.endsWith(d.filename) ||
+                d.filename.endsWith(progFilename))),
+        );
+        if (idx !== -1) {
+          // If download was paused by the user, ignore late in-flight progress packets
+          if (downloads[idx].status === 2) {
+            continue;
+          }
+
+          const percentage = prog.percentage ?? prog.Percentage ?? 0;
+          const currentSize = prog.currentSize ?? prog.CurrentSize ?? 0;
+          const totalSize =
+            (prog.totalSize ?? prog.TotalSize) || downloads[idx].totalSize;
+          const speed = prog.speed ?? prog.Speed ?? 0;
+          const rawEta = prog.eta ?? prog.ETA ?? 0;
+          const eta =
+            typeof rawEta === "number"
+              ? rawEta > 1e6
+                ? Math.floor(rawEta / 1e9)
+                : rawEta
+              : 0;
+
+          const targetId = downloads[idx].id;
+          const prevSize = previousSizes.get(targetId) ?? currentSize;
+          if (currentSize > prevSize) {
+            sessionDownloaded += currentSize - prevSize;
+          }
+          previousSizes.set(targetId, currentSize);
+
+          const isCompleted = percentage >= 100;
+          const prevStatus = downloads[idx].status;
+
+          downloads[idx] = {
+            ...downloads[idx],
+            percentage,
+            currentSize,
+            totalSize,
+            speed,
+            eta,
+            status: isCompleted ? 3 : 1,
+            parts: prog.parts || prog.Parts || downloads[idx].parts || [],
+          };
+
+          if (isCompleted && prevStatus !== 3) {
+            hasCompleted = true;
+          }
+        }
+      }
+
+      if (hasCompleted) {
+        fetchDiskStorage();
+      }
+    }
+
     EventsOn("download:progress", (prog: any) => {
-      const progId = prog.id || prog.ID || "";
-      const progFilename = prog.filename || prog.Filename || "";
-      const idx = downloads.findIndex(
-        (d) =>
-          (progId && d.id === progId) ||
-          (progFilename &&
-            (d.filename === progFilename ||
-              progFilename.endsWith(d.filename) ||
-              d.filename.endsWith(progFilename))),
-      );
-      if (idx !== -1) {
-        // If download was paused by the user, ignore late in-flight progress packets
-        if (downloads[idx].status === 2) {
-          return;
-        }
-
-        const percentage = prog.percentage ?? prog.Percentage ?? 0;
-        const currentSize = prog.currentSize ?? prog.CurrentSize ?? 0;
-        const totalSize =
-          (prog.totalSize ?? prog.TotalSize) || downloads[idx].totalSize;
-        const speed = prog.speed ?? prog.Speed ?? 0;
-        const rawEta = prog.eta ?? prog.ETA ?? 0;
-        const eta =
-          typeof rawEta === "number"
-            ? rawEta > 1e6
-              ? Math.floor(rawEta / 1e9)
-              : rawEta
-            : 0;
-
-        const targetId = downloads[idx].id;
-        const prevSize = previousSizes.get(targetId) ?? currentSize;
-        if (currentSize > prevSize) {
-          sessionDownloaded += currentSize - prevSize;
-        }
-        previousSizes.set(targetId, currentSize);
-
-        const isCompleted = percentage >= 100;
-        const prevStatus = downloads[idx].status;
-
-        downloads[idx] = {
-          ...downloads[idx],
-          percentage,
-          currentSize,
-          totalSize,
-          speed,
-          eta,
-          status: isCompleted ? 3 : 1,
-        };
-
-        if (isCompleted && prevStatus !== 3) {
-          fetchDiskStorage();
-        }
+      const key = prog.id || prog.ID || prog.filename || prog.Filename || "";
+      if (key) {
+        pendingProgressQueue.set(key, prog);
+      }
+      if (animationFrameId === null) {
+        animationFrameId = requestAnimationFrame(flushProgressUpdates);
       }
     });
   });

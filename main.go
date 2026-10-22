@@ -30,6 +30,8 @@ func main() {
 		},
 		Linux: &linux.Options{
 			WindowIsTranslucent: false,
+			WebviewGpuPolicy:    linux.WebviewGpuPolicyAlways,
+			ProgramName:         "downstream",
 		},
 	})
 	if err != nil {

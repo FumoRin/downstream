@@ -9,7 +9,6 @@
     WarningCircleIcon,
     CircleNotchIcon,
     ArrowLeftIcon,
-    HardDriveIcon,
   } from "phosphor-svelte";
   import { ProbeURL } from "../../../wailsjs/go/main/App";
   import { formatBytes } from "../../utils/formatters";
@@ -51,7 +50,9 @@
       step = "confirm";
     } catch (err: any) {
       errorMsg =
-        err?.message || String(err) || "Failed to reach server. Please check the URL.";
+        err?.message ||
+        String(err) ||
+        "Failed to reach server. Please check the URL.";
     } finally {
       isProbing = false;
     }
@@ -100,7 +101,7 @@
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 select-none"
+    class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 animate-in fade-in duration-150 select-none"
     onclick={handleClose}
   >
     <!-- Modal Card -->
@@ -156,7 +157,10 @@
               class="block text-xs font-medium text-tokyo-textSub flex items-center gap-1.5"
             >
               <LinkIcon size={13} class="text-tokyo-teal" />
-              <span>Download Link URL <strong class="text-tokyo-red">*</strong></span>
+              <span
+                >Download Link URL <strong class="text-tokyo-red">*</strong
+                ></span
+              >
             </label>
             <input
               id="download-url"
@@ -168,7 +172,8 @@
               class="w-full h-9 px-3 rounded bg-tokyo-bgSurface border border-tokyo-border text-xs text-tokyo-textMain placeholder:text-tokyo-textMuted focus:outline-none focus:border-tokyo-teal transition-colors font-mono disabled:opacity-50"
             />
             <p class="text-[11px] text-tokyo-textMuted">
-              The link will be tested to detect the file name, size, and multi-part support before downloading.
+              The link will be tested to detect the file name, size, and
+              multi-part support before downloading.
             </p>
           </div>
 
@@ -199,7 +204,7 @@
           </div>
         </form>
 
-      <!-- STEP 2: Metadata Review & Final Confirmation -->
+        <!-- STEP 2: Metadata Review & Final Confirmation -->
       {:else if step === "confirm"}
         <form onsubmit={handleFinalSubmit} class="p-5 space-y-4">
           <!-- Active Link Status Card -->
@@ -236,9 +241,14 @@
           {/if}
 
           <!-- File Metadata Card -->
-          <div class="grid grid-cols-2 gap-3 text-xs font-mono bg-tokyo-bgSurface/40 p-3 rounded border border-tokyo-borderSubtle">
+          <div
+            class="grid grid-cols-2 gap-3 text-xs font-mono bg-tokyo-bgSurface/40 p-3 rounded border border-tokyo-borderSubtle"
+          >
             <div>
-              <span class="text-[10px] uppercase text-tokyo-textMuted block font-sans font-semibold">Total Size</span>
+              <span
+                class="text-[10px] uppercase text-tokyo-textMuted block font-sans font-semibold"
+                >Total Size</span
+              >
               <span class="text-tokyo-textMain font-bold">
                 {probeInfo?.TotalSize && probeInfo.TotalSize > 0
                   ? formatBytes(probeInfo.TotalSize)
@@ -246,8 +256,15 @@
               </span>
             </div>
             <div>
-              <span class="text-[10px] uppercase text-tokyo-textMuted block font-sans font-semibold">Resume Supported</span>
-              <span class={probeInfo?.SupportMultiPart ? "text-tokyo-green font-bold" : "text-tokyo-textMuted"}>
+              <span
+                class="text-[10px] uppercase text-tokyo-textMuted block font-sans font-semibold"
+                >Resume Supported</span
+              >
+              <span
+                class={probeInfo?.SupportMultiPart
+                  ? "text-tokyo-green font-bold"
+                  : "text-tokyo-textMuted"}
+              >
                 {probeInfo?.SupportMultiPart ? "Yes" : "No"}
               </span>
             </div>

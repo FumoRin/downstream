@@ -211,7 +211,7 @@
   <!-- Backdrop -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150 select-none"
     onclick={(e) => {
       if (e.target === e.currentTarget) handleClose();
     }}

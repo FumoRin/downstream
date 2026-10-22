@@ -129,7 +129,7 @@
         class="flex-1 h-2 bg-tokyo-bgSurface rounded-full overflow-hidden border border-tokyo-borderSubtle"
       >
         <div
-          class="h-full rounded-full transition-all duration-200 {statusMeta.barColor}"
+          class="h-full rounded-full transition-[width] duration-150 ease-out {statusMeta.barColor}"
           style="width: {item.status === 3 ? 100 : item.percentage || 0}%"
         ></div>
       </div>
