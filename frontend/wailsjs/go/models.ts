@@ -14,6 +14,28 @@ export namespace downloader {
 	        this.total = source["total"];
 	    }
 	}
+	export class PartState {
+	    id: string;
+	    downloadID: string;
+	    startByte: number;
+	    endByte: number;
+	    currentByte: number;
+	    workerID: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PartState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.downloadID = source["downloadID"];
+	        this.startByte = source["startByte"];
+	        this.endByte = source["endByte"];
+	        this.currentByte = source["currentByte"];
+	        this.workerID = source["workerID"];
+	    }
+	}
 	export class DownloadState {
 	    id: string;
 	    url: string;
@@ -25,6 +47,7 @@ export namespace downloader {
 	    status: number;
 	    // Go type: time
 	    scheduledAt?: any;
+	    parts?: PartState[];
 	
 	    static createFrom(source: any = {}) {
 	        return new DownloadState(source);
@@ -41,6 +64,7 @@ export namespace downloader {
 	        this.percentage = source["percentage"];
 	        this.status = source["status"];
 	        this.scheduledAt = this.convertValues(source["scheduledAt"], null);
+	        this.parts = this.convertValues(source["parts"], PartState);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -61,6 +85,7 @@ export namespace downloader {
 		    return a;
 		}
 	}
+	
 	export class Settings {
 	    DownloadDir: string;
 	    MaxConcurrencyDownload: number;

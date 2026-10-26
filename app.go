@@ -202,3 +202,10 @@ func (a *App) GetDiskStorage() (*downloader.DiskStorage, error) {
 		Total: total,
 	}, nil
 }
+
+func (a *App) GetDownloadParts(id string) ([]*downloader.PartState, error) {
+	if a.repo == nil {
+		return nil, fmt.Errorf("repository not initialize")
+	}
+	return a.repo.GetParts(id)
+}

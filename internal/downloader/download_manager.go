@@ -404,6 +404,9 @@ func (m *DownloadManager) populateDownloadProgress(s *DownloadState) {
 	if s.Status == StateCompleted {
 		s.CurrentSize = s.TotalSize
 		s.Percentage = 100.0
+		if parts, err := m.repo.GetParts(s.ID); err == nil && len(parts) > 0 {
+			s.Parts = parts
+		}
 		return
 	}
 
@@ -414,6 +417,7 @@ func (m *DownloadManager) populateDownloadProgress(s *DownloadState) {
 			downloaded += p.CurrentByte
 		}
 		s.CurrentSize = downloaded
+		s.Parts = parts
 	} else {
 		// 2. Check temp file on disk
 		tmpFile := s.Filename + "." + s.ID + ".tmp"

@@ -46,7 +46,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 
 	progresTickerCtx, stopTicker := context.WithCancel(ctx)
 	defer stopTicker()
-	go reportMultiPartProgress(progresTickerCtx, id, info.Filename, totalSize, &totalDownload, opts.Progress)
+	go reportMultiPartProgress(progresTickerCtx, id, info.Filename, totalSize, &totalDownload, parts, opts.Progress)
 
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(parts))
@@ -150,7 +150,7 @@ func getOrPartHelper(downloadID string, totalSize int64, numParts int, repo Down
 	return parts, nil
 }
 
-func reportMultiPartProgress(ctx context.Context, id string, filename string, totalSize int64, totalDownload *atomic.Int64, progressChan chan<- Progress) {
+func reportMultiPartProgress(ctx context.Context, id string, filename string, totalSize int64, totalDownload *atomic.Int64, parts []*PartState, progressChan chan<- Progress) {
 	if progressChan == nil {
 		return
 	}
@@ -183,6 +183,19 @@ func reportMultiPartProgress(ctx context.Context, id string, filename string, to
 				}
 			}
 
+			partsSnapshot := make([]*PartState, len(parts))
+			for i, p := range parts {
+				cur := atomic.LoadInt64(&p.CurrentByte)
+				partsSnapshot[i] = &PartState{
+					ID:          p.ID,
+					DownloadID:  p.DownloadID,
+					StartByte:   p.StartByte,
+					EndByte:     p.EndByte,
+					CurrentByte: cur,
+					WorkerID:    p.WorkerID,
+				}
+			}
+
 			update := Progress{
 				ID:          id,
 				Filename:    filename,
@@ -191,6 +204,7 @@ func reportMultiPartProgress(ctx context.Context, id string, filename string, to
 				TotalSize:   totalSize,
 				Speed:       speed,
 				ETA:         eta,
+				Parts:       partsSnapshot,
 			}
 
 			select {
@@ -289,7 +303,7 @@ func downloadPartAttempt(
 				return fmt.Errorf("write error at offset %d: %v", offset, err)
 			}
 
-			part.CurrentByte += int64(n)
+			atomic.AddInt64(&part.CurrentByte, int64(n))
 			totalDownloaded.Add(int64(n))
 
 			if repo != nil && time.Since(lastPersist) > 500*time.Millisecond {

@@ -10,12 +10,13 @@ export const DownloadStatusEnum = {
 
 export interface PartState {
   id: string;
-  start: number;
-  end: number;
-  current: number;
-  pct: number;
-  speed?: number;
-  status: "Done" | "Downloading" | "Paused" | "Idle";
+  downloadId?: string;
+  downloadID?: string;
+  startByte: number;
+  endByte: number;
+  currentByte: number;
+  workerId?: string;
+  workerID?: string;
 }
 
 export interface ChunkBlock {

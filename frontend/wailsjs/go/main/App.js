@@ -14,6 +14,10 @@ export function GetDiskStorage() {
   return window['go']['main']['App']['GetDiskStorage']();
 }
 
+export function GetDownloadParts(arg1) {
+  return window['go']['main']['App']['GetDownloadParts'](arg1);
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }

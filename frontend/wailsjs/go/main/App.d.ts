@@ -8,6 +8,8 @@ export function GetAllDownloads():Promise<Array<downloader.DownloadState>>;
 
 export function GetDiskStorage():Promise<downloader.DiskStorage>;
 
+export function GetDownloadParts(arg1:string):Promise<Array<downloader.PartState>>;
+
 export function GetSettings():Promise<downloader.Settings>;
 
 export function ProbeURL(arg1:string):Promise<downloader.TargetInfo>;

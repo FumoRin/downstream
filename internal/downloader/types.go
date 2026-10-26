@@ -66,6 +66,7 @@ type DownloadState struct {
 	Percentage  float64        `json:"percentage"`
 	Status      DownloadStatus `json:"status"`
 	ScheduledAt *time.Time     `json:"scheduledAt"`
+	Parts       []*PartState   `json:"parts,omitempty"`
 }
 
 type ProgressWriter struct {
@@ -89,6 +90,7 @@ type Progress struct {
 	TotalSize   int64         `json:"totalSize"`
 	Speed       float64       `json:"speed"`
 	ETA         time.Duration `json:"eta"`
+	Parts       []*PartState  `json:"parts,omitempty"`
 }
 
 func (s DownloadStatus) String() string {
@@ -100,12 +102,12 @@ func (s DownloadStatus) String() string {
 }
 
 type PartState struct {
-	ID          string
-	DownloadID  string
-	StartByte   int64
-	EndByte     int64
-	CurrentByte int64
-	WorkerID    string
+	ID          string `json:"id"`
+	DownloadID  string `json:"downloadID"`
+	StartByte   int64  `json:"startByte"`
+	EndByte     int64  `json:"endByte"`
+	CurrentByte int64  `json:"currentByte"`
+	WorkerID    string `json:"workerID"`
 }
 
 type DownloadRepository interface {
@@ -136,7 +138,7 @@ type Settings struct {
 	MaxConcurrencyDownload int
 	PartsPerDownload       int
 	MinMultiPartDownload   int64
-	SpeedLimit	int64
+	SpeedLimit             int64
 }
 
 type Category struct {
