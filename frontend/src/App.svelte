@@ -22,6 +22,8 @@
     GetDiskStorage,
     GetSettings,
     UpdateSettings,
+    OpenFile,
+    ShowInFolder,
   } from "../wailsjs/go/main/App";
   import { EventsOn } from "../wailsjs/runtime/runtime";
 
@@ -418,6 +420,32 @@
     }
   }
 
+  function getFullItemPath(item: DownloadItem): string {
+    if (!item.saveDir) return item.filename;
+    return item.saveDir.endsWith("/") || item.saveDir.endsWith("\\")
+      ? `${item.saveDir}${item.filename}`
+      : `${item.saveDir}/${item.filename}`;
+  }
+
+  async function handleOpenFile(item: DownloadItem) {
+    if (item.status !== 3) {
+      console.warn("Cannot open: download not finished");
+      return;
+    }
+    try {
+      await OpenFile(getFullItemPath(item));
+    } catch (e) {
+      console.error("Failed to open file:", e);
+    }
+  }
+
+  async function handleShowInFolder(item: DownloadItem) {
+    try {
+      await ShowInFolder(getFullItemPath(item));
+    } catch (e) {
+      console.error("Failed to reveal in folder:", e);
+    }
+  }
   function unfocus() {
     selectedIds.clear();
     lastClickedId = null;
@@ -563,7 +591,8 @@
         onResume={handleResume}
         onPause={handlePause}
         onDelete={(id) => requestDelete([id])}
-        onOpenFile={(item) => console.log("Open file:", item.filename)}
+        onOpenFile={handleOpenFile}
+        onShowInFolder={handleShowInFolder}
       />
       <DetailsPane {selectedItem} selectedCount={selectedIds.size} />
     </main>

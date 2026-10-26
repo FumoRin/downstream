@@ -12,11 +12,15 @@ export function GetDownloadParts(arg1:string):Promise<Array<downloader.PartState
 
 export function GetSettings():Promise<downloader.Settings>;
 
+export function OpenFile(arg1:string):Promise<void>;
+
 export function ProbeURL(arg1:string):Promise<downloader.TargetInfo>;
 
 export function ResumeDownload(arg1:string):Promise<void>;
 
 export function SelectDirectory():Promise<string>;
+
+export function ShowInFolder(arg1:string):Promise<void>;
 
 export function StartDownload(arg1:string,arg2:string,arg3:string):Promise<string>;
 

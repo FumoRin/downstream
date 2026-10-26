@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/fumorin/downstream/internal/downloader"
 	"github.com/google/uuid"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type App struct {
@@ -39,7 +41,7 @@ func (a *App) startup(ctx context.Context) {
 
 	repo, err := downloader.NewSQLiteRepository(dbPath)
 	if err != nil {
-		runtime.LogErrorf(ctx, "failed to initialize database: %v", err)
+		wailsRuntime.LogErrorf(ctx, "failed to initialize database: %v", err)
 	}
 	a.repo = repo
 
@@ -53,7 +55,7 @@ func (a *App) startup(ctx context.Context) {
 
 	go func() {
 		for prog := range a.manager.ProgressChan() {
-			runtime.EventsEmit(a.ctx, "download:progress", prog)
+			wailsRuntime.EventsEmit(a.ctx, "download:progress", prog)
 		}
 	}()
 }
@@ -161,7 +163,7 @@ func (a *App) SelectDirectory() (string, error) {
 		home, _ := os.UserHomeDir()
 		defaultDir = filepath.Join(home, "Downloads")
 	}
-	selected, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+	selected, err := wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
 		DefaultDirectory: defaultDir,
 		Title:            "Select Download Directory",
 	})
@@ -205,7 +207,52 @@ func (a *App) GetDiskStorage() (*downloader.DiskStorage, error) {
 
 func (a *App) GetDownloadParts(id string) ([]*downloader.PartState, error) {
 	if a.repo == nil {
-		return nil, fmt.Errorf("repository not initialize")
+		return nil, fmt.Errorf("Repository not initialize")
 	}
 	return a.repo.GetParts(id)
+}
+
+func (a *App) OpenFile(path string) error {
+	if path == "" {
+		return fmt.Errorf("path cannot be empty")
+	}
+
+	cleanPath := filepath.Clean(path)
+	if _, err := os.Stat(cleanPath); err != nil {
+		return fmt.Errorf("file not found on disk: %w", err)
+	}
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", cleanPath)
+	case "darwin":
+		cmd = exec.Command("open", cleanPath)
+	default:
+		cmd = exec.Command("xdg-open", cleanPath)
+	}
+
+	return cmd.Start()
+}
+
+func (a *App) ShowInFolder(path string) error {
+	if path == "" {
+		return fmt.Errorf("path cannot be empty")
+	}
+	cleanPath := filepath.Clean(path)
+	dir := cleanPath
+	if stat, err := os.Stat(cleanPath); err != nil || !stat.IsDir() {
+		dir = filepath.Dir(cleanPath)
+	}
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", "/select,", cleanPath)
+	case "darwin":
+		cmd = exec.Command("open", "-R", cleanPath)
+	default: // linux
+		cmd = exec.Command("xdg-open", dir)
+	}
+	return cmd.Start()
 }

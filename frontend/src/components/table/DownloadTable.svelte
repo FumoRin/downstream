@@ -8,6 +8,10 @@
     TrashIcon,
     ColumnsIcon,
     CheckIcon,
+    ArrowSquareOutIcon,
+    FolderIcon,
+    LinkIcon,
+    CopyIcon,
   } from "phosphor-svelte";
   import type {
     DownloadItem,
@@ -36,6 +40,7 @@
     onPause?: (id: string) => void;
     onDelete?: (id: string) => void;
     onOpenFile?: (item: DownloadItem) => void;
+    onShowInFolder?: (item: DownloadItem) => void;
     onUnfocus?: () => void;
   }
 
@@ -52,6 +57,7 @@
     onPause,
     onDelete,
     onOpenFile,
+    onShowInFolder,
     onUnfocus,
   }: Props = $props();
 
@@ -61,6 +67,11 @@
   let showDateAdded = $state(false);
   let showCategory = $state(false);
   let isColumnsMenuOpen = $state(false);
+
+  // Right Click context menu
+  let contextMenuOpen = $state(false);
+  let contextMenuPos = $state({ x: 0, y: 0 });
+  let contextMenuItem = $state<DownloadItem | null>(null);
 
   onMount(() => {
     try {
@@ -91,15 +102,41 @@
     }
   }
 
-  function handleWindowClick() {
-    if (isColumnsMenuOpen) {
-      isColumnsMenuOpen = false;
+  function handleContextMenu(e: MouseEvent, item: DownloadItem) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // If right-clicked item isn't in selection, select it
+    if (!selectedIds.has(item.id)) {
+      onToggleSelect?.(item.id, false, false);
     }
+
+    // Clamp coordinates inside window boundaries
+    const menuWidth = 190;
+    const menuHeight = 220;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 10);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 10);
+
+    contextMenuPos = { x, y };
+    contextMenuItem = item;
+    contextMenuOpen = true;
+  }
+
+  function closeContextMenu() {
+    contextMenuOpen = false;
+    contextMenuItem = null;
+  }
+
+  function handleWindowClick() {
+    if (isColumnsMenuOpen) isColumnsMenuOpen = false;
+    if (contextMenuOpen) closeContextMenu();
   }
 
   function handleWindowKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape" && isColumnsMenuOpen) {
-      isColumnsMenuOpen = false;
+    if (e.key === "Escape") {
+      if (isColumnsMenuOpen) isColumnsMenuOpen = false;
+      if (contextMenuOpen) closeContextMenu();
+      onUnfocus?.();
     }
   }
 
@@ -210,10 +247,7 @@
         </th>
 
         {#if showCategory}
-          <th
-            class="w-24 th-header"
-            onclick={() => onSortChange?.("category")}
-          >
+          <th class="w-24 th-header" onclick={() => onSortChange?.("category")}>
             <div class="flex items-center gap-1">
               <span>Category</span>
               {#if sortField === "category"}
@@ -225,10 +259,7 @@
           </th>
         {/if}
 
-        <th
-          class="w-20 th-header"
-          onclick={() => onSortChange?.("totalSize")}
-        >
+        <th class="w-20 th-header" onclick={() => onSortChange?.("totalSize")}>
           <div class="flex items-center gap-1">
             <span>Size</span>
             {#if sortField === "totalSize"}
@@ -239,10 +270,7 @@
           </div>
         </th>
 
-        <th
-          class="w-32 th-header"
-          onclick={() => onSortChange?.("percentage")}
-        >
+        <th class="w-32 th-header" onclick={() => onSortChange?.("percentage")}>
           <div class="flex items-center gap-1">
             <span>Progress</span>
             {#if sortField === "percentage"}
@@ -253,10 +281,7 @@
           </div>
         </th>
 
-        <th
-          class="w-24 th-header"
-          onclick={() => onSortChange?.("speed")}
-        >
+        <th class="w-24 th-header" onclick={() => onSortChange?.("speed")}>
           <div class="flex items-center gap-1">
             <span>Speed</span>
             {#if sortField === "speed"}
@@ -267,10 +292,7 @@
           </div>
         </th>
 
-        <th
-          class="w-16 th-header"
-          onclick={() => onSortChange?.("eta")}
-        >
+        <th class="w-16 th-header" onclick={() => onSortChange?.("eta")}>
           <div class="flex items-center gap-1">
             <span>ETA</span>
             {#if sortField === "eta"}
@@ -373,6 +395,7 @@
         <tr
           onclick={(e) => handleRowClick(e, item.id)}
           ondblclick={(e) => handleRowDblClick(e, item)}
+          oncontextmenu={(e) => handleContextMenu(e, item)}
           class="cursor-pointer transition-colors group {selected
             ? 'bg-tokyo-bgHighlight text-tokyo-textMain'
             : 'hover:bg-tokyo-bgSurface/40 text-tokyo-textSub'}"
@@ -424,9 +447,7 @@
           {/if}
 
           <!-- Size -->
-          <td class="td-mono"
-            >{formatBytes(item.totalSize)}</td
-          >
+          <td class="td-mono">{formatBytes(item.totalSize)}</td>
 
           <!-- Progress Bar & Percentage -->
           <td class="px-3 py-2.5">
@@ -456,7 +477,12 @@
 
           <!-- Speed -->
           <td
-            class={cn("td-mono whitespace-nowrap tabular-nums", item.status === 1 ? "text-tokyo-teal font-medium" : "text-tokyo-textMuted")}
+            class={cn(
+              "td-mono whitespace-nowrap tabular-nums",
+              item.status === 1
+                ? "text-tokyo-teal font-medium"
+                : "text-tokyo-textMuted",
+            )}
           >
             {item.status === 1 ? formatSpeed(item.speed) : "-"}
           </td>
@@ -539,11 +565,119 @@
       class="py-20 flex flex-col items-center justify-center text-center text-tokyo-textMuted space-y-1"
     >
       <p class="text-sm font-medium">No downloads found</p>
-      <p class="text-xs">
-        Add a URL to get started or clear active filters
-      </p>
+      <p class="text-xs">Add a URL to get started or clear active filters</p>
+    </div>
+  {/if}
+
+  {#if contextMenuOpen && contextMenuItem}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div
+      class="fixed z-50 min-w-48 bg-tokyo-bgDark border border-tokyo-border rounded-lg shadow-2xl py-1 text-xs text-tokyo-textMain select-none animate-in fade-in duration-75"
+      style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
+      onclick={(e) => e.stopPropagation()}
+    >
+      <!-- Open File -->
+      <button
+        type="button"
+        disabled={contextMenuItem.status !== 3}
+        onclick={() => {
+          if (contextMenuItem) onOpenFile?.(contextMenuItem);
+          closeContextMenu();
+        }}
+        class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors disabled:opacity-40 disabled:pointer-events-none"
+      >
+        <ArrowSquareOutIcon size={14} class="text-tokyo-teal" />
+        <span>Open File</span>
+      </button>
+
+      <!-- Show in Folder -->
+      <button
+        type="button"
+        onclick={() => {
+          if (contextMenuItem) onShowInFolder?.(contextMenuItem);
+          closeContextMenu();
+        }}
+        class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors"
+      >
+        <FolderIcon size={14} class="text-tokyo-cyan" />
+        <span>Show in Folder</span>
+      </button>
+
+      <div class="h-px bg-tokyo-borderSubtle my-1"></div>
+
+      <!-- Copy Link -->
+      <button
+        type="button"
+        onclick={() => {
+          if (contextMenuItem)
+            navigator.clipboard.writeText(contextMenuItem.url);
+          closeContextMenu();
+        }}
+        class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors"
+      >
+        <LinkIcon size={14} class="text-tokyo-textMuted" />
+        <span>Copy Download Link</span>
+      </button>
+
+      <!-- Copy Path -->
+      <button
+        type="button"
+        onclick={() => {
+          if (contextMenuItem) {
+            const path = contextMenuItem.saveDir
+              ? `${contextMenuItem.saveDir}/${contextMenuItem.filename}`
+              : contextMenuItem.filename;
+            navigator.clipboard.writeText(path);
+          }
+          closeContextMenu();
+        }}
+        class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors"
+      >
+        <CopyIcon size={14} class="text-tokyo-textMuted" />
+        <span>Copy File Path</span>
+      </button>
+
+      <div class="h-px bg-tokyo-borderSubtle my-1"></div>
+
+      <!-- Resume / Pause -->
+      {#if contextMenuItem.status === 1}
+        <button
+          type="button"
+          onclick={() => {
+            if (contextMenuItem) onPause?.(contextMenuItem.id);
+            closeContextMenu();
+          }}
+          class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors text-tokyo-orange"
+        >
+          <PauseIcon size={14} />
+          <span>Pause Download</span>
+        </button>
+      {:else if contextMenuItem.status === 2 || contextMenuItem.status === 0 || contextMenuItem.status === 4}
+        <button
+          type="button"
+          onclick={() => {
+            if (contextMenuItem) onResume?.(contextMenuItem.id);
+            closeContextMenu();
+          }}
+          class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors text-tokyo-teal"
+        >
+          <PlayIcon size={14} />
+          <span>Resume Download</span>
+        </button>
+      {/if}
+
+      <!-- Delete -->
+      <button
+        type="button"
+        onclick={() => {
+          if (contextMenuItem) onDelete?.(contextMenuItem.id);
+          closeContextMenu();
+        }}
+        class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-red/15 hover:text-tokyo-red text-left transition-colors text-tokyo-textSub"
+      >
+        <TrashIcon size={14} />
+        <span>Delete...</span>
+      </button>
     </div>
   {/if}
 </div>
-
-
