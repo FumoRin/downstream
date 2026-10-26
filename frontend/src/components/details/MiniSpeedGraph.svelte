@@ -92,7 +92,7 @@
 </script>
 
 <div
-  class="w-70 lg:w-[320px] h-33.75 border-l border-tokyo-borderSubtle pl-4 flex flex-col justify-between shrink-0 select-none"
+  class="w-70 lg:w-[320px] h-42 border-l border-tokyo-borderSubtle pl-4 flex flex-col justify-between shrink-0 select-none"
 >
   <!-- Header -->
   <div class="flex items-center justify-between text-xs">
@@ -109,9 +109,9 @@
 
   <!-- Canvas Chart -->
   <div
-    class="h-[75px] w-full bg-tokyo-bgSurface/30 border border-tokyo-borderSubtle rounded overflow-hidden"
+    class="h-[100px] w-full bg-tokyo-bgSurface/30 border border-tokyo-borderSubtle rounded overflow-hidden"
   >
-    <canvas bind:this={canvas} width={300} height={75} class="w-full h-full block"
+    <canvas bind:this={canvas} width={300} height={100} class="w-full h-full block"
     ></canvas>
   </div>
 

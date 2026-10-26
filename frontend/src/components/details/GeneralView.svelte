@@ -67,20 +67,20 @@
   });
 </script>
 
-<div class="flex items-center gap-6 h-full px-4 py-2 select-none">
-  <!-- Left: File Graphic Badge (70x70) -->
+<div class="flex items-center gap-6 h-full px-5 py-3 select-none">
+  <!-- Left: File Graphic Badge (80x80) -->
   <div
-    class="w-[70px] h-[70px] rounded-lg bg-tokyo-bgSurface border border-tokyo-border flex items-center justify-center shrink-0 shadow-inner"
+    class="w-20 h-20 rounded-xl bg-tokyo-bgSurface border border-tokyo-border flex items-center justify-center shrink-0 shadow-inner"
   >
     <FileTypeIcon
       category={item.category}
-      size={32}
-      wrapperClass="w-full h-full rounded-lg flex items-center justify-center shrink-0"
+      size={38}
+      wrapperClass="w-full h-full rounded-xl flex items-center justify-center shrink-0"
     />
   </div>
 
   <!-- Center: Metadata & Progress Info -->
-  <div class="flex-1 min-w-0 space-y-1.5">
+  <div class="flex-1 min-w-0 space-y-2.5">
     <!-- Row 1: Filename + Status Pill -->
     <div class="flex items-center gap-2.5">
       <span
@@ -126,7 +126,7 @@
     <!-- Row 3: Progress Bar -->
     <div class="flex items-center gap-3">
       <div
-        class="flex-1 h-2 bg-tokyo-bgSurface rounded-full overflow-hidden border border-tokyo-borderSubtle"
+        class="flex-1 h-2.5 bg-tokyo-bgSurface rounded-full overflow-hidden border border-tokyo-borderSubtle"
       >
         <div
           class="h-full rounded-full transition-[width] duration-150 ease-out {statusMeta.barColor}"

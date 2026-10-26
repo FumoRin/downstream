@@ -7,6 +7,7 @@
   } from "phosphor-svelte";
   import type { DownloadItem } from "../../types/download";
   import GeneralView from "./GeneralView.svelte";
+  import PartsView from "./PartsView.svelte";
 
   interface Props {
     selectedItem: DownloadItem | null;
@@ -20,13 +21,13 @@
 </script>
 
 <div
-  class="bg-tokyo-bgDark border-t border-tokyo-borderSubtle flex flex-col shrink-0 transition-[height] duration-200 ease-out select-none {isCollapsed
+  class="bg-tokyo-bgDark border-t border-tokyo-borderSubtle flex flex-col shrink-0 transition-[height] duration-150 ease-out select-none {isCollapsed
     ? 'h-8'
-    : 'h-[195px]'}"
+    : 'h-[250px]'}"
 >
   <!-- Pane Header Bar -->
   <div
-    class="h-8 px-4 border-b border-tokyo-borderSubtle flex items-center justify-between bg-tokyo-bgDark/80"
+    class="h-8 px-4 border-b border-tokyo-borderSubtle flex items-center justify-between bg-tokyo-bgDark"
   >
     <div
       class="flex items-center gap-2 text-xs font-medium text-tokyo-textMuted"
@@ -119,11 +120,7 @@
         {#if activeTab === "general"}
           <GeneralView item={selectedItem} />
         {:else}
-          <div
-            class="h-full flex items-center justify-center text-tokyo-textMuted text-xs"
-          >
-            Chunks & Parts view (coming up next)
-          </div>
+          <PartsView item={selectedItem} />
         {/if}
       {/if}
     </div>

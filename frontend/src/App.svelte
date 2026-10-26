@@ -7,7 +7,7 @@
   import DetailsPane from "./components/details/DetailsPane.svelte";
   import StatusBar from "./components/statusbar/StatusBar.svelte";
   import AddDownloadModal from "./components/modals/AddDownloadModal.svelte";
-  import DeleteConfirmModal from "./components/table/DeleteConfirmModal.svelte";
+  import DeleteConfirmModal from "./components/modals/DeleteConfirmModal.svelte";
   import SettingsModal from "./components/modals/SettingsModal.svelte";
 
   import { formatBytes, splitPath } from "./utils/formatters";
@@ -239,7 +239,7 @@
               parsedDir ||
               existing?.saveDir ||
               "~/Downloads",
-            parts: d.parts || existing?.parts || [],
+            parts: d.parts || d.Parts || existing?.parts || [],
           };
         });
 
@@ -529,7 +529,9 @@
     bind:searchQuery
     selectedCount={selectedIds.size}
     isSpeedLimited={currentSpeedLimit > 0}
-    speedLimitLabel={currentSpeedLimit > 0 ? `${formatBytes(currentSpeedLimit)}/s` : "Speed Limit: Off"}
+    speedLimitLabel={currentSpeedLimit > 0
+      ? `${formatBytes(currentSpeedLimit)}/s`
+      : "Speed Limit: Off"}
     onToggleSpeedLimit={handleToggleSpeedLimit}
     onOpenSpeedLimit={() => (isSettingsModalOpen = true)}
     onClearSelection={unfocus}
