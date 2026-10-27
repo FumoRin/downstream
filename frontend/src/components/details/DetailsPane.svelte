@@ -8,13 +8,25 @@
   import type { DownloadItem } from "../../types/download";
   import GeneralView from "./GeneralView.svelte";
   import PartsView from "./PartsView.svelte";
+  import BatchDetailsCard from "./BatchDetailsCard.svelte";
 
   interface Props {
     selectedItem: DownloadItem | null;
     selectedCount: number;
+    selectedItems?: DownloadItem[];
+    onResumeBatch?: (ids: string[]) => void;
+    onPauseBatch?: (ids: string[]) => void;
+    onDeleteBatch?: (ids: string[]) => void;
   }
 
-  let { selectedItem, selectedCount = 0 }: Props = $props();
+  let {
+    selectedItem,
+    selectedCount = 0,
+    selectedItems = [],
+    onResumeBatch,
+    onPauseBatch,
+    onDeleteBatch,
+  }: Props = $props();
 
   let activeTab = $state<"general" | "parts">("general");
   let isCollapsed = $state(false);
@@ -104,17 +116,12 @@
         </div>
       {:else if selectedCount > 1}
         <!-- Multi-Selection Batch State -->
-        <div
-          class="h-full flex flex-col items-center justify-center text-tokyo-textMuted gap-2"
-        >
-          <StackIcon size={24} class="text-tokyo-teal opacity-60" />
-          <p class="text-xs font-semibold text-tokyo-textMain">
-            {selectedCount} downloads selected
-          </p>
-          <p class="text-[11px]">
-            Use header actions to resume, pause, or delete in bulk
-          </p>
-        </div>
+        <BatchDetailsCard
+          {selectedItems}
+          {onResumeBatch}
+          {onPauseBatch}
+          {onDeleteBatch}
+        />
       {:else if selectedItem}
         <!-- Single Item Selected -->
         {#if activeTab === "general"}

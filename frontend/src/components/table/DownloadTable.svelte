@@ -26,6 +26,7 @@
     formatDate,
   } from "../../utils/formatters";
   import { cn } from "../../utils/cn";
+  import { showToast } from "../../utils/toast.svelte";
 
   interface Props {
     items: DownloadItem[];
@@ -611,6 +612,7 @@
         onclick={() => {
           if (contextMenuItem)
             navigator.clipboard.writeText(contextMenuItem.url);
+          showToast("Download link copied to clipboard", "info");
           closeContextMenu();
         }}
         class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-tokyo-bgSurface text-left transition-colors"
@@ -628,6 +630,7 @@
               ? `${contextMenuItem.saveDir}/${contextMenuItem.filename}`
               : contextMenuItem.filename;
             navigator.clipboard.writeText(path);
+            showToast("File path copied to clipboard", "info");
           }
           closeContextMenu();
         }}

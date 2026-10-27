@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
+
   import AppHeader from "./components/header/AppHeader.svelte";
   import Sidebar from "./components/sidebar/Sidebar.svelte";
   import DownloadTable from "./components/table/DownloadTable.svelte";
@@ -9,7 +10,9 @@
   import AddDownloadModal from "./components/modals/AddDownloadModal.svelte";
   import DeleteConfirmModal from "./components/modals/DeleteConfirmModal.svelte";
   import SettingsModal from "./components/modals/SettingsModal.svelte";
+  import ToastContainer from "./components/toast/ToastContainer.svelte";
 
+  import { showToast } from "./utils/toast.svelte";
   import { formatBytes, splitPath } from "./utils/formatters";
 
   // Wails auto-generated Go bindings
@@ -99,6 +102,9 @@
       ? downloads.find((d) => selectedIds.has(d.id)) || null
       : null,
   );
+
+  // Selected array of items for BatchDetailCard
+  let selectedItems = $derived(downloads.filter((d) => selectedIds.has(d.id)));
 
   // Speed Limit
   let currentSpeedLimit = $state(0);
@@ -350,16 +356,19 @@
     }
   }
 
-  async function handleBatchResume() {
-    for (const id of selectedIds) await handleResume(id);
+  async function handleBatchResume(ids?: string[] | unknown) {
+    const targetIds = Array.isArray(ids) ? ids : Array.from(selectedIds);
+    for (const id of targetIds) await handleResume(id);
   }
 
-  async function handleBatchPause() {
-    for (const id of selectedIds) await handlePause(id);
+  async function handleBatchPause(ids?: string[] | unknown) {
+    const targetIds = Array.isArray(ids) ? ids : Array.from(selectedIds);
+    for (const id of targetIds) await handlePause(id);
   }
 
-  function handleBatchDelete() {
-    requestDelete(Array.from(selectedIds));
+  function handleBatchDelete(ids?: string[] | unknown) {
+    const targetIds = Array.isArray(ids) ? ids : Array.from(selectedIds);
+    requestDelete(targetIds);
   }
 
   function handleSortChange(field: SortField) {
@@ -401,14 +410,9 @@
       else selectedIds.add(id);
       lastClickedId = id;
     } else {
-      if (selectedIds.size === 1 && selectedIds.has(id)) {
-        selectedIds.clear();
-        lastClickedId = null;
-      } else {
-        selectedIds.clear();
-        selectedIds.add(id);
-        lastClickedId = id;
-      }
+      selectedIds.clear();
+      selectedIds.add(id);
+      lastClickedId = id;
     }
   }
 
@@ -429,21 +433,21 @@
 
   async function handleOpenFile(item: DownloadItem) {
     if (item.status !== 3) {
-      console.warn("Cannot open: download not finished");
+      showToast("Cannot open file: download has not finished", "warning");
       return;
     }
     try {
       await OpenFile(getFullItemPath(item));
-    } catch (e) {
-      console.error("Failed to open file:", e);
+    } catch (e: any) {
+      showToast(e?.message || "Failed to open file on disk", "error");
     }
   }
 
   async function handleShowInFolder(item: DownloadItem) {
     try {
       await ShowInFolder(getFullItemPath(item));
-    } catch (e) {
-      console.error("Failed to reveal in folder:", e);
+    } catch (e: any) {
+      showToast(e?.message || "Failed to reveal in folder", "error");
     }
   }
   function unfocus() {
@@ -594,7 +598,14 @@
         onOpenFile={handleOpenFile}
         onShowInFolder={handleShowInFolder}
       />
-      <DetailsPane {selectedItem} selectedCount={selectedIds.size} />
+      <DetailsPane
+        {selectedItem}
+        selectedCount={selectedIds.size}
+        {selectedItems}
+        onResumeBatch={handleBatchResume}
+        onPauseBatch={handleBatchPause}
+        onDeleteBatch={requestDelete}
+      />
     </main>
   </div>
 
@@ -627,4 +638,6 @@
       await loadSettings();
     }}
   />
+
+  <ToastContainer />
 </div>
