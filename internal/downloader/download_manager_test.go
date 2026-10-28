@@ -24,12 +24,7 @@ func TestDownloadManagerQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to retrieved settings: %v", err)
 	}
-
-	workingWd, _ := os.Getwd()
-	_ = os.Chdir(tempDir)
-	defer func() {
-		_ = os.Chdir(workingWd)
-	}()
+	setting.DownloadDir = tempDir
 
 	mgr := NewDownloadManager(repo, setting)
 	mgr.StartWorker(2)
@@ -71,13 +66,7 @@ func TestDownloadManagerStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to retrieved settings: %v", err)
 	}
-
-	originalWd, _ := os.Getwd()
-	_ = os.Chdir(tempDir)
-
-	defer func() {
-		_ = os.Chdir(originalWd)
-	}()
+	setting.DownloadDir = tempDir
 
 	mgr := NewDownloadManager(repo, setting)
 	mgr.StartWorker(1)
