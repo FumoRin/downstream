@@ -18,6 +18,8 @@ export function ProbeURL(arg1:string):Promise<downloader.TargetInfo>;
 
 export function ResumeDownload(arg1:string):Promise<void>;
 
+export function ScheduleDownload(arg1:string,arg2:string,arg3:string,arg4:number):Promise<string>;
+
 export function SelectDirectory():Promise<string>;
 
 export function ShowInFolder(arg1:string):Promise<void>;

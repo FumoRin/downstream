@@ -34,6 +34,10 @@ export function ResumeDownload(arg1) {
   return window['go']['main']['App']['ResumeDownload'](arg1);
 }
 
+export function ScheduleDownload(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ScheduleDownload'](arg1, arg2, arg3, arg4);
+}
+
 export function SelectDirectory() {
   return window['go']['main']['App']['SelectDirectory']();
 }

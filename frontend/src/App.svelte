@@ -18,6 +18,7 @@
   // Wails auto-generated Go bindings
   import {
     StartDownload,
+    ScheduleDownload,
     GetAllDownloads,
     StopDownload,
     ResumeDownload,
@@ -281,12 +282,29 @@
   }
 
   // Download actions
-  async function handleAddDownload(url: string, filename: string, dir: string) {
+  async function handleAddDownload(
+    url: string,
+    filename: string,
+    dir: string,
+    scheduledUnix?: number | null,
+  ) {
     try {
-      await StartDownload(url, filename, dir);
-      await loadDownloads();
-    } catch (e) {
-      console.error("StartDownload error:", e);
+      if (scheduledUnix && scheduledUnix > 0) {
+        await ScheduleDownload(url, filename, dir, scheduledUnix);
+        const schedDate = new Date(scheduledUnix * 1000);
+        const timeStr = schedDate.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        showToast(`Download started for ${timeStr}`, "success")
+      } else {
+        StartDownload(url, filename, dir)
+        showToast("Download started", "success")
+      }
+      await loadDownloads()
+    } catch (e: any) {
+      console.error("AddDownload error:", e);
+      showToast(e?.message || "Failed to add download", "error")
       throw e;
     }
   }

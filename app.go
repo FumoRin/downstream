@@ -256,3 +256,31 @@ func (a *App) ShowInFolder(path string) error {
 	}
 	return cmd.Start()
 }
+
+func (a *App) ScheduleDownload(url, customFilename, customDir string, scheduleTimeUnix int64) (string, error) {
+	if url == "" {
+		return "", fmt.Errorf("url cannot be empty")
+	}
+
+	if scheduleTimeUnix <= 0 {
+		return "", fmt.Errorf("scheduled time must be a valid time in the future")
+	}
+
+	scheduledAt := time.Unix(scheduleTimeUnix, 0)
+	if scheduledAt.Before(time.Now()) {
+		return "", fmt.Errorf("scheduled time must be in the future")
+	}
+
+	id := uuid.NewString()
+	ctx := a.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	_, err := a.manager.ScheduleDownload(id, url, customFilename, ctx, scheduledAt)
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}

@@ -9,6 +9,8 @@
     WarningCircleIcon,
     CircleNotchIcon,
     ArrowLeftIcon,
+    ClockIcon,
+    CalendarBlankIcon,
   } from "phosphor-svelte";
   import { ProbeURL } from "../../../wailsjs/go/main/App";
   import { formatBytes } from "../../utils/formatters";
@@ -17,7 +19,12 @@
   interface Props {
     open?: boolean;
     onClose?: () => void;
-    onSubmit?: (url: string, filename: string, dir: string) => Promise<void>;
+    onSubmit?: (
+      url: string,
+      filename: string,
+      dir: string,
+      scheduledUnix?: number | null,
+    ) => Promise<void>;
   }
 
   let { open = $bindable(false), onClose, onSubmit }: Props = $props();
@@ -30,7 +37,48 @@
   let isSubmitting = $state(false);
   let errorMsg = $state("");
   let probeInfo = $state<downloader.TargetInfo | null>(null);
+  let isScheduled = $state(false);
+  let scheduledDateTime = $state(""); // formatted YYYY-MM-DDHH:mm
 
+  // Formatter for Date Object for scheduledTime format
+  function toLocalDatetimeInput(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  // Quick Presets
+  function applyPresetMinutes(minutes: number) {
+    const d = new Date(Date.now() + minutes * 60 * 1000);
+    scheduledDateTime = toLocalDatetimeInput(d);
+  }
+
+  function setTonight() {
+    const d = new Date();
+    d.setHours(22, 0, 0, 0);
+    if (d.getTime() <= Date.now()) {
+      d.setDate(d.getDate() + 1); // If already past 22:00, schedule for tomorrow 22:00
+    }
+    scheduledDateTime = toLocalDatetimeInput(d);
+  }
+
+  function setTomorrowMorning() {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    scheduledDateTime = toLocalDatetimeInput(d);
+  }
+
+  function toggleScheduled() {
+    isScheduled = !isScheduled;
+    if (isScheduled && !scheduledDateTime) {
+      applyPresetMinutes(60); // Default to +1 hour from now
+    }
+  }
   // Step 1: Probe URL
   async function handleProbe(e?: Event) {
     if (e) e.preventDefault();
@@ -64,8 +112,29 @@
     isSubmitting = true;
     errorMsg = "";
     try {
+      let scheduledUnix: number | null = null;
+      if (isScheduled) {
+        if (!scheduledDateTime) {
+          throw new Error(
+            "Please select a date and time for the scheduled download",
+          );
+        }
+        const schedTime = new Date(scheduledDateTime).getTime();
+        if (isNaN(schedTime)) {
+          throw new Error("Invalid date and time selected");
+        }
+        if (schedTime <= Date.now()) {
+          throw new Error("Schedule time must be in the future");
+        }
+        scheduledUnix = Math.floor(schedTime / 1000);
+      }
       if (onSubmit) {
-        await onSubmit(url.trim(), filename.trim(), customDir.trim());
+        await onSubmit(
+          url.trim(),
+          filename.trim(),
+          customDir.trim(),
+          scheduledUnix,
+        );
       }
       handleClose();
     } catch (err: any) {
@@ -87,6 +156,7 @@
     customDir = "";
     probeInfo = null;
     errorMsg = "";
+    scheduledDateTime = "";
     open = false;
     onClose?.();
   }
@@ -306,6 +376,114 @@
             />
           </div>
 
+          <!-- Schedule for Later Section -->
+          <div class="pt-1">
+            <div
+              class="p-3 rounded-lg bg-tokyo-bgSurface/50 border border-tokyo-borderSubtle space-y-3 transition-colors"
+            >
+              <!-- Toggle Header -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div
+                    class="w-6 h-6 rounded bg-tokyo-purple/15 text-tokyo-purple flex items-center justify-center shrink-0"
+                  >
+                    <ClockIcon size={14} weight="bold" />
+                  </div>
+                  <div>
+                    <span
+                      class="text-xs font-semibold text-tokyo-textMain block"
+                    >
+                      Schedule for later
+                    </span>
+                    <span class="text-[11px] text-tokyo-textMuted block">
+                      Queue download to start automatically at a set time
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Custom Pill Switch -->
+                <button
+                  type="button"
+                  role="switch"
+                  aria-label="Toggle schedule for later"
+                  aria-checked={isScheduled}
+                  onclick={toggleScheduled}
+                  class="w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 cursor-pointer {isScheduled
+                    ? 'bg-tokyo-purple'
+                    : 'bg-tokyo-bgSurface border border-tokyo-border'}"
+                >
+                  <span
+                    class="w-3 h-3 rounded-full bg-white transition-transform duration-150 {isScheduled
+                      ? 'translate-x-3.5'
+                      : 'translate-x-0'}"
+                  ></span>
+                </button>
+              </div>
+
+              <!-- Collapsible Schedule Options -->
+              {#if isScheduled}
+                <div
+                  class="space-y-2.5 pt-2 border-t border-tokyo-borderSubtle animate-in fade-in duration-100"
+                >
+                  <!-- Quick Preset Chips -->
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span
+                      class="text-[10px] text-tokyo-textMuted uppercase font-mono mr-1"
+                    >
+                      Presets:
+                    </span>
+                    <button
+                      type="button"
+                      onclick={() => applyPresetMinutes(15)}
+                      class="px-2 py-0.5 rounded text-[11px] font-mono bg-tokyo-bgDark hover:bg-tokyo-bgHighlight text-tokyo-textSub hover:text-tokyo-textMain border border-tokyo-borderSubtle transition-colors"
+                    >
+                      +15m
+                    </button>
+                    <button
+                      type="button"
+                      onclick={() => applyPresetMinutes(60)}
+                      class="px-2 py-0.5 rounded text-[11px] font-mono bg-tokyo-bgDark hover:bg-tokyo-bgHighlight text-tokyo-textSub hover:text-tokyo-textMain border border-tokyo-borderSubtle transition-colors"
+                    >
+                      +1h
+                    </button>
+                    <button
+                      type="button"
+                      onclick={setTonight}
+                      class="px-2 py-0.5 rounded text-[11px] font-mono bg-tokyo-bgDark hover:bg-tokyo-bgHighlight text-tokyo-textSub hover:text-tokyo-textMain border border-tokyo-borderSubtle transition-colors"
+                    >
+                      Tonight (22:00)
+                    </button>
+                    <button
+                      type="button"
+                      onclick={setTomorrowMorning}
+                      class="px-2 py-0.5 rounded text-[11px] font-mono bg-tokyo-bgDark hover:bg-tokyo-bgHighlight text-tokyo-textSub hover:text-tokyo-textMain border border-tokyo-borderSubtle transition-colors"
+                    >
+                      Tomorrow (09:00)
+                    </button>
+                  </div>
+
+                  <!-- Datetime-local Input -->
+                  <div class="space-y-1">
+                    <label
+                      for="scheduled-datetime"
+                      class="block text-[11px] text-tokyo-textMuted font-mono"
+                    >
+                      Start Date & Time
+                    </label>
+                    <input
+                      id="scheduled-datetime"
+                      type="datetime-local"
+                      bind:value={scheduledDateTime}
+                      min={toLocalDatetimeInput(new Date())}
+                      required={isScheduled}
+                      class="w-full h-8 px-3 rounded bg-tokyo-bgSurface border border-tokyo-border text-xs text-tokyo-textMain focus:outline-none focus:border-tokyo-purple transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+              {/if}
+            </div>
+          </div>
+
           <!-- Actions -->
           <div
             class="pt-2 flex items-center justify-between border-t border-tokyo-borderSubtle"
@@ -330,11 +508,16 @@
               <button
                 type="submit"
                 disabled={isSubmitting || !filename.trim()}
-                class="h-8 px-4 rounded text-xs font-bold bg-tokyo-teal text-tokyo-bgDark hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-1.5 shadow-sm"
+                class="h-8 px-4 rounded text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none {isScheduled
+                  ? 'bg-tokyo-purple text-tokyo-bgDark hover:brightness-110'
+                  : 'bg-tokyo-teal text-tokyo-bgDark hover:brightness-110'}"
               >
                 {#if isSubmitting}
                   <CircleNotchIcon size={14} class="animate-spin" />
-                  <span>Starting...</span>
+                  <span>{isScheduled ? "Scheduling..." : "Starting..."}</span>
+                {:else if isScheduled}
+                  <CalendarBlankIcon size={14} weight="bold" />
+                  <span>Schedule Download</span>
                 {:else}
                   <DownloadSimpleIcon size={14} weight="bold" />
                   <span>Start Download</span>
