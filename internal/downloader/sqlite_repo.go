@@ -2,6 +2,8 @@ package downloader
 
 import (
 	"database/sql"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +15,129 @@ import (
 
 type SQLiteRepository struct {
 	db *sql.DB
+}
+
+type migration struct {
+	version     int
+	description string
+	run         func(tx *sql.Tx) error
+}
+
+var migrations = []migration{
+	{
+		version:     1,
+		description: "Base schema from unreleased version, metadata, parts progress, settings, categories",
+		run: func(tx *sql.Tx) error {
+			queries := []string{
+				`CREATE TABLE IF NOT EXISTS download_metadata (
+					id TEXT PRIMARY KEY,
+					url TEXT NOT NULL,
+					filename TEXT NOT NULL,
+					total_size INTEGER,
+					status INTEGER,
+					categories TEXT,
+					scheduled_at INTEGER
+				);`,
+				`CREATE TABLE IF NOT EXISTS download_part_progress (                                                                                                                                                                                                         
+          id TEXT PRIMARY KEY,                                                                                                                                                                                                                                     
+          download_id TEXT REFERENCES download_metadata(id) ON DELETE CASCADE,                                                                                                                                                                                     
+          start_byte INTEGER NOT NULL,                                                                                                                                                                                                                             
+          end_byte INTEGER NOT NULL,                                                                                                                                                                                                                               
+          current_byte INTEGER NOT NULL,                                                                                                                                                                                                                           
+          workers_id TEXT                                                                                                                                                                                                                                          
+        );`,
+				`CREATE TABLE IF NOT EXISTS settings (                                                                                                                                                                                                                       
+          key TEXT PRIMARY KEY,                                                                                                                                                                                                                                    
+          value TEXT NOT NULL                                                                                                                                                                                                                                      
+        );`,
+				`CREATE TABLE IF NOT EXISTS categories (                                                                                                                                                                                                                     
+          name TEXT PRIMARY KEY,                                                                                                                                                                                                                                   
+          folder_path TEXT NOT NULL,                                                                                                                                                                                                                               
+          extension TEXT NOT NULL                                                                                                                                                                                                                                  
+        );`,
+			}
+
+			for _, q := range queries {
+				if _, err := tx.Exec(q); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+	},
+}
+
+func backupDatabaseFile(srcPath, dstPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer func() {
+	}()
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = dst.Close()
+	}()
+
+	_, err = io.Copy(dst, src)
+	return err
+}
+
+func migrate(conn *sql.DB, dbPath string) error {
+	var currentVersion int
+	if err := conn.QueryRow("PRAGMA user_version;").Scan(&currentVersion); err != nil {
+		return fmt.Errorf("failed to read user_version: %w", err)
+	}
+
+	maxVersion := 0
+	if len(migrations) > 0 {
+		maxVersion = migrations[len(migrations)-1].version
+	}
+
+	// Version Guard: Newer DB opened by an older binary
+	if currentVersion > maxVersion {
+		fmt.Printf("Warning: database user_version (%d) is newer than application max version (%d). Running in compatibility mode.\n", currentVersion, maxVersion)
+		return nil
+	}
+
+	for _, m := range migrations {
+		if m.version > currentVersion {
+			// Pre-migration backup if upgrading an existing non-empty database file
+			if info, err := os.Stat(dbPath); err == nil && info.Size() > 0 && dbPath != ":memory:" {
+				backupPath := fmt.Sprintf("%s.v%d.bak", dbPath, currentVersion)
+				_ = backupDatabaseFile(dbPath, backupPath)
+			}
+
+			tx, err := conn.Begin()
+			if err != nil {
+				return fmt.Errorf("failed to begin migration tx (v%d): %w", m.version, err)
+			}
+
+			if err := m.run(tx); err != nil {
+				_ = tx.Rollback()
+				return fmt.Errorf("migration v%d failed: %w", m.version, err)
+			}
+
+			if err := tx.Commit(); err != nil {
+				return fmt.Errorf("failed to commit migration v%d: %w", m.version, err)
+			}
+
+			// Update user_version pragma after commit
+			if _, err := conn.Exec(fmt.Sprintf("PRAGMA user_version = %d;", m.version)); err != nil {
+				return fmt.Errorf("failed to update user_version to %d: %w", m.version, err)
+			}
+			currentVersion = m.version
+		}
+	}
+	return nil
 }
 
 func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
@@ -30,62 +155,30 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 	if _, err := conn.Exec("PRAGMA foreign_keys = ON;"); err != nil {
 		return nil, err
 	}
-	metadataQuery := `
-	CREATE TABLE IF NOT EXISTS download_metadata (
-		id TEXT PRIMARY KEY,
-		url TEXT NOT NULL,
-		filename TEXT NOT NULL,
-		total_size INTEGER,
-		status INTEGER,
-		categories TEXT,
-		scheduled_at INTEGER
-	);
-	`
 
-	partQuery := `
-	CREATE TABLE IF NOT EXISTS download_part_progress (
-		id TEXT PRIMARY KEY,
-		download_id TEXT REFERENCES download_metadata(id) ON DELETE CASCADE,
-		start_byte INTEGER NOT NULL,
-		end_byte INTEGER NOT NULL,
-		current_byte INTEGER NOT NULL,
-		workers_id TEXT
-	);
-	`
+	if err := migrate(conn, dbPath); err != nil {
+		return nil, fmt.Errorf("database migration failed: %w", err)
+	}
 
-	settingsQuery := `
-	CREATE TABLE IF NOT EXISTS settings (
-		key TEXT PRIMARY KEY,
-		value TEXT NOT NULL
-	)
-	`
-
-	categoriesQuery := `
-	CREATE TABLE IF NOT EXISTS categories (
-		name TEXT PRIMARY KEY,
-		folder_path TEXT NOT NULL,
-		extension TEXT NOT NULL
-	)
-	`
-
-	if _, err := conn.Exec(metadataQuery); err != nil {
-		return nil, err
-	}
-	if _, err := conn.Exec(partQuery); err != nil {
-		return nil, err
-	}
-	if _, err := conn.Exec(settingsQuery); err != nil {
-		return nil, err
-	}
-	if _, err := conn.Exec(categoriesQuery); err != nil {
-		return nil, err
-	}
 	return &SQLiteRepository{db: conn}, nil
+}
+
+func (r *SQLiteRepository) GetSchemaVersion() (int, error) {
+	var v int
+	err := r.db.QueryRow("PRAGMA user_version;").Scan(&v)
+	return v, err
+}
+
+func (r *SQLiteRepository) Close() error {
+	if r.db != nil {
+		return r.db.Close()
+	}
+	return nil
 }
 
 func (r *SQLiteRepository) SaveDownload(state *DownloadState) error {
 	var scheduledUnix sql.NullInt64
-	if state.ScheduledAt  != nil {
+	if state.ScheduledAt != nil {
 		scheduledUnix = sql.NullInt64{Int64: state.ScheduledAt.Unix(), Valid: true}
 	}
 
@@ -334,10 +427,10 @@ func (r *SQLiteRepository) SeedDefaultCategories(defaultDownloadDir string) erro
 		extension string
 	}{
 		{"Videos", filepath.Join(defaultDownloadDir, "Videos"), "mp4,mkv,avi,mov,flv,webm"},
-		{"Music", filepath.Join(defaultDownloadDir, "Music"), "mp3,wav,flac,aac,ogg,m4a"},                                                                                                                      
-		{"Documents", filepath.Join(defaultDownloadDir, "Documents"), "pdf,doc,docx,xls,xlsx,ppt,pptx,txt,epub"},                                                                                               
-		{"Archives", filepath.Join(defaultDownloadDir, "Archives"), "zip,rar,7z,tar,gz,bz2,xz"},                                                                                                                
-		{"Programs", filepath.Join(defaultDownloadDir, "Programs"), "exe,msi,dmg,deb,rpm,AppImage,iso"},                                                                                                        
+		{"Music", filepath.Join(defaultDownloadDir, "Music"), "mp3,wav,flac,aac,ogg,m4a"},
+		{"Documents", filepath.Join(defaultDownloadDir, "Documents"), "pdf,doc,docx,xls,xlsx,ppt,pptx,txt,epub"},
+		{"Archives", filepath.Join(defaultDownloadDir, "Archives"), "zip,rar,7z,tar,gz,bz2,xz"},
+		{"Programs", filepath.Join(defaultDownloadDir, "Programs"), "exe,msi,dmg,deb,rpm,AppImage,iso"},
 	}
 
 	for _, d := range defaults {
@@ -355,7 +448,7 @@ func (r *SQLiteRepository) GetCategories() ([]*Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func()  {
+	defer func() {
 		_ = rows.Close()
 	}()
 
@@ -375,9 +468,9 @@ func (r *SQLiteRepository) GetCategories() ([]*Category, error) {
 		}
 
 		categories = append(categories, &Category{
-			Name: name,
+			Name:       name,
 			FolderPath: folder,
-			Extension: extList,
+			Extension:  extList,
 		})
 	}
 
@@ -399,7 +492,7 @@ func (r *SQLiteRepository) GetDueScheduledDownloads(now time.Time) ([]*DownloadS
 	if err != nil {
 		return nil, err
 	}
-	defer func()  {
+	defer func() {
 		_ = rows.Close()
 	}()
 

@@ -119,3 +119,58 @@ func TestSQLiteRepository_PartsAndCascadeDelete(t *testing.T) {
 		t.Errorf("foreign key cascade failed: expected 0 parts, found %d", len(remainingParts))
 	}
 }
+
+func TestSQLiteRepository_SchemaVersion(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "version_test.db")
+
+	repo, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
+
+	version, err := repo.GetSchemaVersion()
+	if err != nil {
+		t.Fatalf("GetSchemaVersion failed: %v", err)
+	}
+	if version != 1 {
+		t.Errorf("expected schema version 1, got %d", version)
+	}
+	_ = repo.Close()
+
+	// Reopening must remain idempotent at version 1 without error
+	reopened, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("failed to reopen repo: %v", err)
+	}
+	reopenedVer, _ := reopened.GetSchemaVersion()
+	if reopenedVer != 1 {
+		t.Errorf("expected schema version 1 on reopen, got %d", reopenedVer)
+	}
+}
+
+func TestSQLiteRepository_VersionGuard(t *testing.T) {
+	tempDir := t.TempDir()
+	dbPath := filepath.Join(tempDir, "guard_test.db")
+
+	repo, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
+
+	// Simulate a database from a newer version (version 99)
+	if _, err := repo.db.Exec("PRAGMA user_version = 99;"); err != nil {
+		t.Fatalf("failed to set future version: %v", err)
+	}
+	_ = repo.Close()
+
+	// Reopening with current binary must not fail or downgrade blindly
+	reopened, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("expected version guard to allow opening in compatibility mode, got error: %v", err)
+	}
+	v, _ := reopened.GetSchemaVersion()
+	if v != 99 {
+		t.Errorf("expected version to remain 99, got %d", v)
+	}
+}
