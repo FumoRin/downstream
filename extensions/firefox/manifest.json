@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Downstream Integration for Firefox",
+  "version": "1.0.0",
+  "description": "Browser Integration for Downstream Download Manager for Firefox",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "downstream@fumorin.my.id",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": ["contextMenus", "nativeMessaging", "downloads"],
+  "background": {
+    "scripts": ["background.js"]
+  }
+}

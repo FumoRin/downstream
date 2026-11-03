@@ -29,7 +29,7 @@
     OpenFile,
     ShowInFolder,
   } from "../wailsjs/go/main/App";
-  import { EventsOn } from "../wailsjs/runtime/runtime";
+  import { EventsOn, EventsOff } from "../wailsjs/runtime/runtime";
 
   import type {
     DownloadItem,
@@ -38,6 +38,7 @@
     SortOrder,
   } from "./types/download";
 
+  let defaultDownloadDir = $state("")
   let downloads = $state<DownloadItem[]>([]);
   let selectedIds = new SvelteSet<string>();
   let multiSelectMode = $state(false);
@@ -122,6 +123,9 @@
   async function loadSettings() {
     try {
       const s = await GetSettings();
+      if (s?.DownloadDir) {
+        defaultDownloadDir = s.DownloadDir
+      }
       if (s && typeof s.SpeedLimit === "number") {
         currentSpeedLimit = s.SpeedLimit;
         if (s.SpeedLimit > 0) {
@@ -247,7 +251,8 @@
               d.SaveDir ||
               parsedDir ||
               existing?.saveDir ||
-              "~/Downloads",
+              defaultDownloadDir ||
+              "",
             parts: d.parts || d.Parts || existing?.parts || [],
           };
         });
@@ -296,15 +301,15 @@
           hour: "2-digit",
           minute: "2-digit",
         });
-        showToast(`Download started for ${timeStr}`, "success")
+        showToast(`Download started for ${timeStr}`, "success");
       } else {
-        StartDownload(url, filename, dir)
-        showToast("Download started", "success")
+        StartDownload(url, filename, dir);
+        showToast("Download started", "success");
       }
-      await loadDownloads()
+      await loadDownloads();
     } catch (e: any) {
       console.error("AddDownload error:", e);
-      showToast(e?.message || "Failed to add download", "error")
+      showToast(e?.message || "Failed to add download", "error");
       throw e;
     }
   }
@@ -479,6 +484,7 @@
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
+    EventsOff("download:progress", "download:external_added")
   });
 
   onMount(async () => {
@@ -550,6 +556,7 @@
 
           if (isCompleted && prevStatus !== 3) {
             hasCompleted = true;
+            loadDownloads()
           }
         }
       }
@@ -567,6 +574,14 @@
       if (animationFrameId === null) {
         animationFrameId = requestAnimationFrame(flushProgressUpdates);
       }
+    });
+
+    EventsOn("download:external_added", async (data: any) => {
+      await loadDownloads();
+      showToast(
+        `Download added from browser: ${data.filename || data.url}`,
+        "info",
+      );
     });
   });
 </script>

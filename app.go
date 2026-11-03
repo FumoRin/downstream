@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/fumorin/downstream/internal/downloader"
@@ -16,10 +19,111 @@ import (
 )
 
 type App struct {
-	ctx      context.Context
-	manager  *downloader.DownloadManager
-	repo     downloader.DownloadRepository
-	settings downloader.Settings
+	ctx           context.Context
+	manager       *downloader.DownloadManager
+	repo          downloader.DownloadRepository
+	settings      downloader.Settings
+	ipcListener   net.Listener
+	ipcSocketPath string
+}
+
+type IPCMessage struct {
+	Action   string `json:"action"`
+	URL      string `json:"url"`
+	Filename string `json:"filename,omitempty"`
+	Referrer string `json:"referrer,omitempty"`
+}
+
+type IPCResponse struct {
+	Status  string `json:"status"`
+	ID      string `json:"id,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+func (a *App) getIPCSocketPath() string {
+	return filepath.Join(os.TempDir(), fmt.Sprintf("downstream-%d.sock", os.Getuid()))
+}
+
+func (a *App) startIPCServer() {
+	socketPath := a.getIPCSocketPath()
+	a.ipcSocketPath = socketPath
+
+	if conn, err := net.DialTimeout("unix", socketPath, 100*time.Millisecond); err == nil {
+		_ = conn.Close()
+		wailsRuntime.LogWarningf(a.ctx, "another Downstream IPC is already listening on %s", socketPath)
+		return
+	} else {
+		_ = os.Remove(socketPath)
+	}
+
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		wailsRuntime.LogErrorf(a.ctx, "failed to start IPC listener: %v", err)
+		return
+	}
+	a.ipcListener = listener
+	_ = os.Chmod(socketPath, 0o600)
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+
+			go a.handleIPCConnection(conn)
+		}
+	}()
+}
+
+func (a *App) handleIPCConnection(conn net.Conn) {
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	var msg IPCMessage
+	if err := json.NewDecoder(conn).Decode(&msg); err != nil {
+		_ = json.NewEncoder(conn).Encode(IPCResponse{
+			Status:  "error",
+			Message: fmt.Sprintf("invalid JSON payload: %v", err),
+		})
+		return
+	}
+
+	switch msg.Action {
+	case "ping":
+		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
+
+	case "download":
+		if msg.URL == "" {
+			_ = json.NewEncoder(conn).Encode(IPCResponse{
+				Status:  "error",
+				Message: "URL cannot be empty",
+			})
+			return
+		}
+
+		id := uuid.NewString()
+		a.manager.StartDownload(id, msg.URL, msg.Filename, "", nil)
+
+		// Notify Wails frontend so the UI refreshes and pops a toast
+		wailsRuntime.EventsEmit(a.ctx, "download:external_added", map[string]string{
+			"id":       id,
+			"url":      msg.URL,
+			"filename": msg.Filename,
+		})
+
+		_ = json.NewEncoder(conn).Encode(IPCResponse{
+			Status: "ok",
+			ID:     id,
+		})
+
+	default:
+		_ = json.NewEncoder(conn).Encode(IPCResponse{
+			Status:  "error",
+			Message: fmt.Sprintf("unknown action: %s", msg.Action),
+		})
+	}
 }
 
 func NewApp() *App {
@@ -52,6 +156,7 @@ func (a *App) startup(ctx context.Context) {
 	a.manager = downloader.NewDownloadManager(repo, settings)
 	a.manager.StartWorker(settings.MaxConcurrencyDownload)
 	a.manager.StartScheduler(1 * time.Second)
+	a.startIPCServer()
 
 	go func() {
 		for prog := range a.manager.ProgressChan() {
@@ -62,6 +167,12 @@ func (a *App) startup(ctx context.Context) {
 
 // Shutdown called by Wails when the desktop window is closed
 func (a *App) shutdown(ctx context.Context) {
+	if a.ipcListener != nil {
+		_ = a.ipcListener.Close()
+	}
+	if a.ipcSocketPath != "" {
+		_ = os.Remove(a.ipcSocketPath)
+	}
 	if a.manager != nil {
 		a.manager.Shutdown()
 	}
@@ -235,11 +346,28 @@ func (a *App) OpenFile(path string) error {
 	return cmd.Start()
 }
 
+func expandPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	if path == "~" {
+		if home, err := os.UserHomeDir(); err == nil {
+			return home
+		}
+	} else if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~\\") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, path[2:])
+		}
+	}
+	return filepath.Clean(path)
+}
+
 func (a *App) ShowInFolder(path string) error {
 	if path == "" {
 		return fmt.Errorf("path cannot be empty")
 	}
-	cleanPath := filepath.Clean(path)
+	cleanPath := expandPath(path)
 	dir := cleanPath
 	if stat, err := os.Stat(cleanPath); err != nil || !stat.IsDir() {
 		dir = filepath.Dir(cleanPath)
