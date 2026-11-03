@@ -32,12 +32,15 @@ type IPCMessage struct {
 	URL      string `json:"url"`
 	Filename string `json:"filename,omitempty"`
 	Referrer string `json:"referrer,omitempty"`
+	Key      string `json:"key,omitempty"`
+	Value    string `json:"value,omitempty"`
 }
 
 type IPCResponse struct {
-	Status  string `json:"status"`
-	ID      string `json:"id,omitempty"`
-	Message string `json:"message,omitempty"`
+	Status   string               `json:"status"`
+	ID       string               `json:"id,omitempty"`
+	Message  string               `json:"message,omitempty"`
+	Settings *downloader.Settings `json:"settings,omitempty"`
 }
 
 func (a *App) getIPCSocketPath() string {
@@ -94,6 +97,35 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 	case "ping":
 		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
 
+	case "get_settings":
+		var settings *downloader.Settings
+		if a.repo != nil {
+			settings, _ = a.repo.GetAllSettings()
+		}
+		_ = json.NewEncoder(conn).Encode(IPCResponse{
+			Status:   "ok",
+			Settings: settings,
+		})
+
+	case "update_settings":
+		if a.repo == nil {
+			_ = json.NewEncoder(conn).Encode(IPCResponse{
+				Status:  "error",
+				Message: "repository not initialized",
+			})
+			return
+		}
+		if msg.Key != "" && msg.Value != "" {
+			if err := a.repo.SetSettings(msg.Key, msg.Value); err != nil {
+				_ = json.NewEncoder(conn).Encode(IPCResponse{
+					Status:  "error",
+					Message: err.Error(),
+				})
+				return
+			}
+		}
+		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
+
 	case "download":
 		if msg.URL == "" {
 			_ = json.NewEncoder(conn).Encode(IPCResponse{
@@ -103,6 +135,35 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 			return
 		}
 
+		action := "prompt"
+		if a.repo != nil {
+			if s, err := a.repo.GetAllSettings(); err == nil && s.BrowserDownloadAction != "" {
+				action = s.BrowserDownloadAction
+			}
+		}
+
+		if action == "prompt" {
+			// Bring Downstream window into view
+			if a.ctx != nil {
+				wailsRuntime.WindowShow(a.ctx)
+				wailsRuntime.WindowUnminimise(a.ctx)
+			}
+
+			// Emit event for frontend to open AddDownload confirmation modal
+			wailsRuntime.EventsEmit(a.ctx, "download:external_prompt", map[string]string{
+				"url":      msg.URL,
+				"filename": msg.Filename,
+				"referrer": msg.Referrer,
+			})
+
+			_ = json.NewEncoder(conn).Encode(IPCResponse{
+				Status:  "ok",
+				Message: "prompted",
+			})
+			return
+		}
+
+		// Otherwise: "auto" mode (start silently)
 		id := uuid.NewString()
 		a.manager.StartDownload(id, msg.URL, msg.Filename, "", nil)
 
@@ -257,6 +318,12 @@ func (a *App) UpdateSettings(settings downloader.Settings) error {
 
 	if settings.SpeedLimit >= 0 {
 		if err := a.repo.SetSettings("speed_limit", strconv.FormatInt(settings.SpeedLimit, 10)); err != nil {
+			return err
+		}
+	}
+
+	if settings.BrowserDownloadAction != "" {
+		if err := a.repo.SetSettings("browser_download_action", settings.BrowserDownloadAction); err != nil {
 			return err
 		}
 	}

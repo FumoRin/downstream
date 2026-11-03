@@ -10,6 +10,7 @@
     WarningCircleIcon,
     CircleNotchIcon,
     CaretDownIcon,
+    GlobeIcon
   } from "phosphor-svelte";
   import {
     GetSettings,
@@ -40,6 +41,7 @@
   let partsPerDownload = $state(4);
   let minMultiPartMB = $state(5);
   let showStatusBarLocal = $state(true);
+  let browserDownloadAction = $state<"prompt" | "auto">("prompt");
 
   // Status & Feedback States
   let initialDownloadDir = $state("");
@@ -76,6 +78,13 @@
           1,
           Math.round(s.MinMultiPartDownload || 5242880) / (1024 * 1024),
         );
+
+        if (
+          s.BrowserDownloadAction === "auto" ||
+          s.BrowserDownloadAction === "prompt"
+        ) {
+          browserDownloadAction = s.BrowserDownloadAction;
+        }
 
         const limitBytes = s.SpeedLimit || 0;
         if (limitBytes > 0) {
@@ -167,6 +176,7 @@
         PartsPerDownload: Number(partsPerDownload),
         MinMultiPartDownload: Number(minMultiPartMB) * 1024 * 1024,
         SpeedLimit: calculateSpeedLimit,
+        BrowserDownloadAction: browserDownloadAction,
       });
 
       showStatusBar = showStatusBarLocal;
@@ -485,6 +495,42 @@
                   </span>
                 </div>
               </label>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <label
+                class="text-xs font-medium text-tokyo-textSub flex items-center gap-1.5"
+              >
+                <GlobeIcon size={13} class="text-tokyo-purple" />
+                <span>Browser Download Interception</span>
+              </label>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onclick={() => (browserDownloadAction = "prompt")}
+                  class="h-9 px-3 rounded border text-xs flex items-center justify-center gap-1.5 transition-colors font-medium {browserDownloadAction ===
+                  'prompt'
+                    ? 'bg-tokyo-teal/15 border-tokyo-teal text-tokyo-teal'
+                    : 'bg-tokyo-bgSurface border-tokyo-border text-tokyo-textMuted hover:text-tokyo-textMain'}"
+                >
+                  <span>Confirmation Dialog</span>
+                </button>
+                <button
+                  type="button"
+                  onclick={() => (browserDownloadAction = "auto")}
+                  class="h-9 px-3 rounded border text-xs flex items-center justify-center gap-1.5 transition-colors font-medium {browserDownloadAction ===
+                  'auto'
+                    ? 'bg-tokyo-teal/15 border-tokyo-teal text-tokyo-teal'
+                    : 'bg-tokyo-bgSurface border-tokyo-border text-tokyo-textMuted hover:text-tokyo-textMain'}"
+                >
+                  <span>Automatic Download</span>
+                </button>
+              </div>
+              <p class="text-[11px] text-tokyo-textMuted">
+                Choose whether downloads from browser open the confirmation
+                prompt to edit location and schedule, or download silently in
+                the background.
+              </p>
             </div>
           </form>
         {:else}

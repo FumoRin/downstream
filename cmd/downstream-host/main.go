@@ -16,12 +16,15 @@ type NativeMessage struct {
 	URL      string `json:"url"`
 	Filename string `json:"filename,omitempty"`
 	Referrer string `json:"referrer,omitempty"`
+	Key      string `json:"key,omitempty"`
+	Value    string `json:"value,omitempty"`
 }
 
 type NativeResponse struct {
-	Status  string `json:"status"`
-	ID      string `json:"id,omitempty"`
-	Message string `json:"message,omitempty"`
+	Status   string      `json:"status"`
+	ID       string      `json:"id,omitempty"`
+	Message  string      `json:"message,omitempty"`
+	Settings interface{} `json:"settings,omitempty"`
 }
 
 func getIPCSocketPath() string {

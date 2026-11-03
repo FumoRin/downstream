@@ -92,6 +92,7 @@ export namespace downloader {
 	    PartsPerDownload: number;
 	    MinMultiPartDownload: number;
 	    SpeedLimit: number;
+	    BrowserDownloadAction: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -104,6 +105,7 @@ export namespace downloader {
 	        this.PartsPerDownload = source["PartsPerDownload"];
 	        this.MinMultiPartDownload = source["MinMultiPartDownload"];
 	        this.SpeedLimit = source["SpeedLimit"];
+	        this.BrowserDownloadAction = source["BrowserDownloadAction"];
 	    }
 	}
 	export class TargetInfo {

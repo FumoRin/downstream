@@ -25,9 +25,17 @@
       dir: string,
       scheduledUnix?: number | null,
     ) => Promise<void>;
+    initialUrl?: string;
+    initialFilename?: string;
   }
 
-  let { open = $bindable(false), onClose, onSubmit }: Props = $props();
+  let {
+    open = $bindable(false),
+    onClose,
+    onSubmit,
+    initialUrl = "",
+    initialFilename = "",
+  }: Props = $props();
 
   let step = $state<"url" | "confirm">("url");
   let url = $state("");
@@ -164,6 +172,14 @@
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") handleClose();
   }
+
+  $effect(() => {
+    if (open && initialUrl) {
+      url = initialUrl;
+      filename = initialFilename || "";
+      handleProbe(); // Automatically probe and advance to step = "confirm"
+    }
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

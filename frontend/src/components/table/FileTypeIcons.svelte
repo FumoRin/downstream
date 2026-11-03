@@ -19,6 +19,7 @@
   const iconConfig = $derived.by(() => {
     switch (category.toLowerCase()) {
       case "video":
+      case "videos":
         return {
           icon: FilmSlateIcon,
           color: "text-tokyo-orange bg-tokyo-orange/10",
@@ -30,13 +31,17 @@
           color: "text-tokyo-blue bg-tokyo-blue/10",
         };
       case "compressed":
+      case "archives":
+      case "archive":
         return {
           icon: ArchiveIcon,
           color: "text-tokyo-purple bg-tokyo-purple/10",
         };
       case "programs":
+      case "program":
         return { icon: DiscIcon, color: "text-tokyo-teal bg-tokyo-teal/10" };
       case "audio":
+      case "music":
         return {
           icon: MusicNoteIcon,
           color: "text-tokyo-yellow bg-tokyo-yellow/10",
@@ -48,7 +53,9 @@
 </script>
 
 <div
-  class={wrapperClass ? `${wrapperClass} ${iconConfig.color}` : `w-6 h-6 rounded flex items-center justify-center shrink-0 ${iconConfig.color}`}
+  class={wrapperClass
+    ? `${wrapperClass} ${iconConfig.color}`
+    : `w-6 h-6 rounded flex items-center justify-center shrink-0 ${iconConfig.color}`}
 >
   <iconConfig.icon {size} />
 </div>

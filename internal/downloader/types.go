@@ -139,6 +139,7 @@ type Settings struct {
 	PartsPerDownload       int
 	MinMultiPartDownload   int64
 	SpeedLimit             int64
+	BrowserDownloadAction  string
 }
 
 type Category struct {

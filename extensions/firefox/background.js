@@ -7,67 +7,6 @@ browser.runtime.onInstalled.addListener(() => {
   });
 });
 
-// Helper to extract a clean filename from a URL path
-function extractFilename(urlStr) {
-  try {
-    const url = new URL(urlStr);
-    const pathname = url.pathname;
-    const segments = pathname.split("/").filter(Boolean);
-    if (segments.length > 0) {
-      const last = decodeURIComponent(segments[segments.length - 1]);
-      if (last.includes(".")) {
-        return last;
-      }
-    }
-  } catch (_) { }
-  return "";
-}
-
-// Handle context menu clicks
-browser.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== "download-with-downstream") {
-    return;
-  }
-
-  // Links use linkUrl; media elements use srcUrl
-  const targetUrl = info.linkUrl || info.srcUrl;
-  if (!targetUrl) {
-    return;
-  }
-
-  const filename = extractFilename(targetUrl);
-  const referrer = info.pageUrl || tab?.url || "";
-
-  const payload = {
-    action: "download",
-    url: targetUrl,
-    filename: filename,
-    referrer: referrer,
-  };
-
-  try {
-    const response = await browser.runtime.sendNativeMessage(
-      "downstream",
-      payload,
-    );
-    console.log("[Downstream] Response from host:", response);
-    if (response && response.status === "error") {
-      console.error("[Downstream] Error from desktop:", response.message);
-    }
-  } catch (err) {
-    console.error("[Downstream] Failed to send native message:", err);
-  }
-});
-
-// Register right-click context menu when extension is installed
-browser.runtime.onInstalled.addListener(() => {
-  browser.contextMenus.create({
-    id: "download-with-downstream",
-    title: "Download with Downstream",
-    contexts: ["link", "image", "video", "audio"],
-  });
-});
-
 // Cache recently sent URLs to prevent duplicate triggers
 const recentDownloads = new Map();
 
@@ -75,12 +14,11 @@ function shouldSend(url) {
   const now = Date.now();
   if (recentDownloads.has(url)) {
     const lastTime = recentDownloads.get(url);
-    if (now - lastTime < 2000) {
-      return false; // deduplicate within 2 seconds
+    if (now - lastTime < 3000) {
+      return false; // deduplicate within 3 seconds
     }
   }
   recentDownloads.set(url, now);
-  // clean up old entries
   if (recentDownloads.size > 100) {
     const oldestKey = recentDownloads.keys().next().value;
     recentDownloads.delete(oldestKey);
@@ -88,7 +26,6 @@ function shouldSend(url) {
   return true;
 }
 
-// Helper to extract a clean filename from a URL path or suggested filename
 function extractFilename(urlStr, suggestedFilename) {
   if (suggestedFilename && suggestedFilename.trim()) {
     const clean = suggestedFilename.trim();
@@ -111,6 +48,11 @@ function extractFilename(urlStr, suggestedFilename) {
   return "";
 }
 
+async function isInterceptionEnabled() {
+  const data = await browser.storage.local.get("enabled");
+  return data.enabled !== false; // default to true
+}
+
 async function forwardToDownstream(targetUrl, filename, referrer) {
   if (!shouldSend(targetUrl)) {
     return;
@@ -128,7 +70,6 @@ async function forwardToDownstream(targetUrl, filename, referrer) {
       "downstream",
       payload,
     );
-    console.log("[Downstream] Response from host:", response);
     if (response && response.status === "error") {
       console.error("[Downstream] Error from desktop:", response.message);
     }
@@ -144,21 +85,30 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 
   const targetUrl = info.linkUrl || info.srcUrl;
-  if (!targetUrl) {
-    return;
-  }
+  if (!targetUrl) return;
 
   const filename = extractFilename(targetUrl, "");
   const referrer = info.pageUrl || tab?.url || "";
-
   await forwardToDownstream(targetUrl, filename, referrer);
 });
 
-// 2. Automatic download interception handler
-browser.downloads.onCreated.addListener(async (downloadItem) => {
-  const url = downloadItem.url;
+// 2. DOM Click Interception listener from content.js
+browser.runtime.onMessage.addListener(async (message) => {
+  if (message.action === "intercepted_click") {
+    const enabled = await isInterceptionEnabled();
+    if (!enabled) return;
 
-  // Ignore memory/client-only blobs, data URIs, or internal browser URLs
+    const filename = extractFilename(message.url, message.filename);
+    await forwardToDownstream(message.url, filename, message.referrer || "");
+  }
+});
+
+// 3. Fallback: browser.downloads.onCreated
+browser.downloads.onCreated.addListener(async (downloadItem) => {
+  const enabled = await isInterceptionEnabled();
+  if (!enabled) return;
+
+  const url = downloadItem.url;
   if (
     !url ||
     url.startsWith("blob:") ||
@@ -169,16 +119,24 @@ browser.downloads.onCreated.addListener(async (downloadItem) => {
     return;
   }
 
-  // Cancel Firefox's native download so it doesn't download concurrently
+  // If already forwarded by content script in the last 3 seconds, just cancel native download
+  if (!shouldSend(url)) {
+    try {
+      await browser.downloads.cancel(downloadItem.id);
+      await browser.downloads.erase({ id: downloadItem.id });
+    } catch (_) { }
+    return;
+  }
+
+  // Otherwise, cancel and forward
   try {
     await browser.downloads.cancel(downloadItem.id);
     await browser.downloads.erase({ id: downloadItem.id });
   } catch (e) {
-    console.warn("[Downstream] Could not cancel native download:", e);
+    console.warn("[Downstream] Could not cancel fallback download:", e);
   }
 
   const filename = extractFilename(url, downloadItem.filename);
   const referrer = downloadItem.referrer || "";
-
   await forwardToDownstream(url, filename, referrer);
 });

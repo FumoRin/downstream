@@ -38,7 +38,7 @@
     SortOrder,
   } from "./types/download";
 
-  let defaultDownloadDir = $state("")
+  let defaultDownloadDir = $state("");
   let downloads = $state<DownloadItem[]>([]);
   let selectedIds = new SvelteSet<string>();
   let multiSelectMode = $state(false);
@@ -49,6 +49,8 @@
   let sortOrder = $state<SortOrder>("desc");
   let isAddModalOpen = $state(false);
   let isSettingsModalOpen = $state(false);
+  let externalPromptUrl = $state("");
+  let externalPromptFilename = $state("");
 
   // Status Bar State
   let showStatusBar = $state(
@@ -124,7 +126,7 @@
     try {
       const s = await GetSettings();
       if (s?.DownloadDir) {
-        defaultDownloadDir = s.DownloadDir
+        defaultDownloadDir = s.DownloadDir;
       }
       if (s && typeof s.SpeedLimit === "number") {
         currentSpeedLimit = s.SpeedLimit;
@@ -152,6 +154,7 @@
         PartsPerDownload: current?.PartsPerDownload || 4,
         MinMultiPartDownload: current?.MinMultiPartDownload || 5 * 1024 * 1024,
         SpeedLimit: targetLimit,
+        BrowserDownloadAction: current?.BrowserDownloadAction || "prompt",
       });
       await loadSettings();
     } catch (e) {
@@ -303,7 +306,7 @@
         });
         showToast(`Download started for ${timeStr}`, "success");
       } else {
-        StartDownload(url, filename, dir);
+        await StartDownload(url, filename, dir);
         showToast("Download started", "success");
       }
       await loadDownloads();
@@ -484,7 +487,11 @@
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
-    EventsOff("download:progress", "download:external_added")
+    EventsOff(
+      "download:progress",
+      "download:external_added",
+      "download:external_prompt",
+    );
   });
 
   onMount(async () => {
@@ -556,8 +563,10 @@
 
           if (isCompleted && prevStatus !== 3) {
             hasCompleted = true;
-            loadDownloads()
+            loadDownloads();
           }
+          loadDownloads()
+          continue
         }
       }
 
@@ -574,6 +583,12 @@
       if (animationFrameId === null) {
         animationFrameId = requestAnimationFrame(flushProgressUpdates);
       }
+    });
+
+    EventsOn("download:external_prompt", (data: any) => {
+      externalPromptUrl = data.url || "";
+      externalPromptFilename = data.filename || "";
+      isAddModalOpen = true;
     });
 
     EventsOn("download:external_added", async (data: any) => {
@@ -654,7 +669,20 @@
   {/if}
 
   <!-- Add Download Modal Dialog -->
-  <AddDownloadModal bind:open={isAddModalOpen} onSubmit={handleAddDownload} />
+  <AddDownloadModal
+    bind:open={isAddModalOpen}
+    initialUrl={externalPromptUrl}
+    initialFilename={externalPromptFilename}
+    onClose={() => {
+      externalPromptUrl = "";
+      externalPromptFilename = "";
+    }}
+    onSubmit={async (url, filename, dir, scheduledUnix) => {
+      await handleAddDownload(url, filename, dir, scheduledUnix);
+      externalPromptUrl = "";
+      externalPromptFilename = "";
+    }}
+  />
 
   <!-- Delete Confirmation Modal Dialog -->
   <DeleteConfirmModal

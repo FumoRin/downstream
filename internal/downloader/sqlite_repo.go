@@ -367,6 +367,7 @@ func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
 		MaxConcurrencyDownload: 3,
 		PartsPerDownload:       4,
 		MinMultiPartDownload:   5 * 1024 * 1024,
+		BrowserDownloadAction:  "prompt",
 	}
 
 	rows, err := r.db.Query("SELECT key, value FROM settings")
@@ -401,6 +402,10 @@ func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
 		case "speed_limit":
 			if n, err := strconv.ParseInt(val, 10, 64); err == nil && n >= 0 {
 				settings.SpeedLimit = n
+			}
+		case "browser_download_action":
+			if val == "auto" || val == "prompt" {
+				settings.BrowserDownloadAction = val
 			}
 		}
 	}

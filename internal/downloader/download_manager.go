@@ -20,7 +20,7 @@ func (m *DownloadManager) StartWorker(count int) {
 // StartDownload Start a Download
 func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, limiters ...*rate.Limiter) {
 	var limiter *rate.Limiter
-	if len(limiters) > 0  && limiters[0] != nil {
+	if len(limiters) > 0 && limiters[0] != nil {
 		limiter = limiters[0]
 	} else {
 		limiter = m.limiter
@@ -28,10 +28,17 @@ func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, 
 
 	state, err := m.repo.GetDownload(generatedID)
 	if err != nil || state == nil {
+		catName := "General"
+		if filename != "" && m.repo != nil && m.settings != nil {
+			if categories, catErr := m.repo.GetCategories(); catErr == nil {
+				_, catName = ResolveDestination(filepath.Base(filename), categories, m.settings.DownloadDir)
+			}
+		}
 		state = &DownloadState{
 			ID:        generatedID,
 			URL:       url,
 			Filename:  filename,
+			Category:  catName,
 			TotalSize: 0,
 		}
 	}
