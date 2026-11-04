@@ -10,7 +10,7 @@
     WarningCircleIcon,
     CircleNotchIcon,
     CaretDownIcon,
-    GlobeIcon
+    GlobeIcon,
   } from "phosphor-svelte";
   import {
     GetSettings,
@@ -55,6 +55,9 @@
   let speedLimitValue = $state(5);
   let speedLimitUnit = $state<"MB" | "KB">("MB");
 
+  // Browser Integration
+  let browserAutoForeground = $state(false);
+
   // Load existing settings whenever modal opens
   $effect(() => {
     if (open) {
@@ -79,6 +82,7 @@
           Math.round(s.MinMultiPartDownload || 5242880) / (1024 * 1024),
         );
 
+        // Browser integration settings
         if (
           s.BrowserDownloadAction === "auto" ||
           s.BrowserDownloadAction === "prompt"
@@ -86,6 +90,9 @@
           browserDownloadAction = s.BrowserDownloadAction;
         }
 
+        browserAutoForeground = !!s.BrowserAutoForeground;
+
+        // Speed Limit settings
         const limitBytes = s.SpeedLimit || 0;
         if (limitBytes > 0) {
           isSpeedLimited = true;
@@ -177,6 +184,7 @@
         MinMultiPartDownload: Number(minMultiPartMB) * 1024 * 1024,
         SpeedLimit: calculateSpeedLimit,
         BrowserDownloadAction: browserDownloadAction,
+        BrowserAutoForeground: browserAutoForeground,
       });
 
       showStatusBar = showStatusBarLocal;
@@ -531,6 +539,22 @@
                 prompt to edit location and schedule, or download silently in
                 the background.
               </p>
+              {#if browserDownloadAction === "auto"}
+                <div class="flex items-center gap-2 pt-1 pl-0.5">
+                  <input
+                    id="auto-foreground"
+                    type="checkbox"
+                    bind:checked={browserAutoForeground}
+                    class="rounded border-tokyo-border bg-tokyo-bgSurface text-tokyo-teal focus:ring-0"
+                  />
+                  <label
+                    for="auto-foreground"
+                    class="text-xs text-tokyo-textSub cursor-pointer select-none"
+                  >
+                    Bring Downstream to foreground when download starts
+                  </label>
+                </div>
+              {/if}
             </div>
           </form>
         {:else}

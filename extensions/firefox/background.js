@@ -53,10 +53,24 @@ async function isInterceptionEnabled() {
   return data.enabled !== false; // default to true
 }
 
+function notify(title, message) {
+  try {
+    browser.notifications.create({
+      type: "basic",
+      title: title,
+      message: message,
+    });
+  } catch (err) {
+    console.warn("[Downstream] Could not trigger notification:", err);
+  }
+}
+
 async function forwardToDownstream(targetUrl, filename, referrer) {
   if (!shouldSend(targetUrl)) {
     return;
   }
+
+  const displayName = filename || extractFilename(targetUrl) || "download";
 
   const payload = {
     action: "download",
@@ -72,9 +86,23 @@ async function forwardToDownstream(targetUrl, filename, referrer) {
     );
     if (response && response.status === "error") {
       console.error("[Downstream] Error from desktop:", response.message);
+      notify(
+        "Downstream Error",
+        response.message || "Failed to start download",
+      );
+    } else if (response && response.status === "ok") {
+      if (response.message === "prompted") {
+        console.log(`Opening confirmation dialog for: ${displayName}`);
+      } else {
+        notify("Downstream", `Started downloading: ${displayName}`);
+      }
     }
   } catch (err) {
     console.error("[Downstream] Failed to send native message:", err);
+    notify(
+      "Downstream Error",
+      "Desktop application is not running. Please launch Downstream.",
+    );
   }
 }
 

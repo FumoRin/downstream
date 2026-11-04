@@ -5,3 +5,4 @@
 3. **Blast-Radius Limit:** Modify at most 2–3 files per turn. Break multi-layer changes (e.g., state -> IPC/API -> UI) into sequential checkpoints so we can verify each layer independently. You can skip this rule if the users explicitly request skip the blast radius limit 
 4. **Surface Trade-offs & Internals:** Whenever you introduce a library API, concurrency pattern, state hook, or system call, briefly explain *why* it was chosen over alternatives and call out any edge cases (memory leaks, race conditions, layout reflows).
 5. **No Silent Fixes:** If a build or test fails, explain the root cause of the error before applying a patch. Do not brute-force retry edits silently.
+6. **Create test after building**: Makes sure that after building a feature to create a test suites to make sure there's no regression after changes.

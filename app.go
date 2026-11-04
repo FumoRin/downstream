@@ -126,6 +126,13 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 		}
 		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
 
+	case "open_app":
+		if a.ctx != nil {
+			wailsRuntime.WindowShow(a.ctx)
+			wailsRuntime.WindowUnminimise(a.ctx)
+		}
+		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
+
 	case "download":
 		if msg.URL == "" {
 			_ = json.NewEncoder(conn).Encode(IPCResponse{
@@ -161,6 +168,22 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 				Message: "prompted",
 			})
 			return
+		}
+
+		if action == "auto" {
+			autoForeground := false
+			if a.repo != nil {
+				if s, err := a.repo.GetAllSettings(); err == nil {
+					if s.BrowserAutoForeground {
+						autoForeground = true
+					}
+				}
+			}
+
+			if autoForeground && a.ctx != nil {
+				wailsRuntime.WindowShow(a.ctx)
+				wailsRuntime.WindowUnminimise(a.ctx)
+			}
 		}
 
 		// Otherwise: "auto" mode (start silently)
@@ -326,6 +349,10 @@ func (a *App) UpdateSettings(settings downloader.Settings) error {
 		if err := a.repo.SetSettings("browser_download_action", settings.BrowserDownloadAction); err != nil {
 			return err
 		}
+	}
+
+	if err := a.repo.SetSettings("browser_auto_foreground", strconv.FormatBool(settings.BrowserAutoForeground)); err != nil {
+		return err
 	}
 
 	a.settings = settings

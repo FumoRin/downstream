@@ -368,6 +368,7 @@ func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
 		PartsPerDownload:       4,
 		MinMultiPartDownload:   5 * 1024 * 1024,
 		BrowserDownloadAction:  "prompt",
+		BrowserAutoForeground:  false,
 	}
 
 	rows, err := r.db.Query("SELECT key, value FROM settings")
@@ -406,6 +407,10 @@ func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
 		case "browser_download_action":
 			if val == "auto" || val == "prompt" {
 				settings.BrowserDownloadAction = val
+			}
+		case "browser_auto_foreground":
+		if b, err := strconv.ParseBool(val); err == nil {
+				settings.BrowserAutoForeground = b
 			}
 		}
 	}

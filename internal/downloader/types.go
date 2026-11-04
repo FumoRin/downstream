@@ -140,6 +140,7 @@ type Settings struct {
 	MinMultiPartDownload   int64
 	SpeedLimit             int64
 	BrowserDownloadAction  string
+	BrowserAutoForeground  bool
 }
 
 type Category struct {

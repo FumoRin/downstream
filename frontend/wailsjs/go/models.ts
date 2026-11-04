@@ -93,6 +93,7 @@ export namespace downloader {
 	    MinMultiPartDownload: number;
 	    SpeedLimit: number;
 	    BrowserDownloadAction: string;
+	    BrowserAutoForeground: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -106,6 +107,7 @@ export namespace downloader {
 	        this.MinMultiPartDownload = source["MinMultiPartDownload"];
 	        this.SpeedLimit = source["SpeedLimit"];
 	        this.BrowserDownloadAction = source["BrowserDownloadAction"];
+	        this.BrowserAutoForeground = source["BrowserAutoForeground"];
 	    }
 	}
 	export class TargetInfo {

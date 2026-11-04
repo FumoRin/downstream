@@ -155,6 +155,7 @@
         MinMultiPartDownload: current?.MinMultiPartDownload || 5 * 1024 * 1024,
         SpeedLimit: targetLimit,
         BrowserDownloadAction: current?.BrowserDownloadAction || "prompt",
+        BrowserAutoForeground: current?.BrowserAutoForeground || false
       });
       await loadSettings();
     } catch (e) {

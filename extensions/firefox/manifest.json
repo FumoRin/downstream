@@ -9,7 +9,13 @@
       "strict_min_version": "109.0"
     }
   },
-  "permissions": ["contextMenus", "nativeMessaging", "downloads", "storage"],
+  "permissions": [
+    "contextMenus",
+    "nativeMessaging",
+    "downloads",
+    "storage",
+    "notifications"
+  ],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html",
