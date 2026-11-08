@@ -43,6 +43,19 @@ type IPCResponse struct {
 	Settings *downloader.Settings `json:"settings,omitempty"`
 }
 
+func (a *App) emitEvent(name string, data ...interface{}) {
+	if a.ctx != nil && a.ctx.Value("events") != nil {
+		wailsRuntime.EventsEmit(a.ctx, name, data...)
+	}
+}
+
+func (a *App) showWindow() {
+	if a.ctx != nil && a.ctx.Value("window") != nil {
+		wailsRuntime.WindowShow(a.ctx)
+		wailsRuntime.WindowUnminimise(a.ctx)
+	}
+}
+
 func (a *App) getIPCSocketPath() string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("downstream-%d.sock", os.Getuid()))
 }
@@ -128,8 +141,7 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 
 	case "open_app":
 		if a.ctx != nil {
-			wailsRuntime.WindowShow(a.ctx)
-			wailsRuntime.WindowUnminimise(a.ctx)
+			a.showWindow()
 		}
 		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
 
@@ -152,12 +164,11 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 		if action == "prompt" {
 			// Bring Downstream window into view
 			if a.ctx != nil {
-				wailsRuntime.WindowShow(a.ctx)
-				wailsRuntime.WindowUnminimise(a.ctx)
+				a.showWindow()
 			}
 
 			// Emit event for frontend to open AddDownload confirmation modal
-			wailsRuntime.EventsEmit(a.ctx, "download:external_prompt", map[string]string{
+			a.emitEvent("download:external_prompt", map[string]string{
 				"url":      msg.URL,
 				"filename": msg.Filename,
 				"referrer": msg.Referrer,
@@ -181,8 +192,7 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 			}
 
 			if autoForeground && a.ctx != nil {
-				wailsRuntime.WindowShow(a.ctx)
-				wailsRuntime.WindowUnminimise(a.ctx)
+				a.showWindow()
 			}
 		}
 
@@ -191,7 +201,7 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 		a.manager.StartDownload(id, msg.URL, msg.Filename, "", nil)
 
 		// Notify Wails frontend so the UI refreshes and pops a toast
-		wailsRuntime.EventsEmit(a.ctx, "download:external_added", map[string]string{
+		a.emitEvent("download:external_added", map[string]string{
 			"id":       id,
 			"url":      msg.URL,
 			"filename": msg.Filename,
