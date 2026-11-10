@@ -52,7 +52,7 @@ func (a *App) emitEvent(name string, data ...interface{}) {
 }
 
 func (a *App) showWindow() {
-	if a.ctx != nil && a.ctx.Value("window") != nil {
+	if a.ctx != nil && a.ctx.Value("frontend") != nil {
 		wailsRuntime.WindowShow(a.ctx)
 		wailsRuntime.WindowUnminimise(a.ctx)
 	}
@@ -138,6 +138,13 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 				})
 				return
 			}
+
+			if s, err := a.repo.GetAllSettings(); err == nil {
+				a.settings = *s
+				if a.manager != nil {
+					a.manager.UpdateSettings(s)
+				}
+			}
 		}
 		_ = json.NewEncoder(conn).Encode(IPCResponse{Status: "ok"})
 
@@ -169,12 +176,12 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 		}
 
 		action := "prompt"
-		if a.settings.BrowserDownloadAction != "" {
-			action = a.settings.BrowserDownloadAction
-		} else if a.repo != nil {
+		if a.repo != nil {
 			if s, err := a.repo.GetAllSettings(); err == nil && s.BrowserDownloadAction != "" {
 				action = s.BrowserDownloadAction
 			}
+		} else if a.settings.BrowserDownloadAction != "" {
+			action = a.settings.BrowserDownloadAction
 		}
 
 		if action == "prompt" {
@@ -203,11 +210,13 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 		}
 
 		if action == "auto" {
-			autoForeground := a.settings.BrowserAutoForeground
-			if !autoForeground && a.repo != nil {
+			autoForeground := false
+			if a.repo != nil {
 				if s, err := a.repo.GetAllSettings(); err == nil {
 					autoForeground = s.BrowserAutoForeground
 				}
+			} else {
+				autoForeground = a.settings.BrowserAutoForeground
 			}
 
 			if autoForeground && a.ctx != nil {

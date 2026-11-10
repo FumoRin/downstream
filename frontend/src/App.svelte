@@ -18,6 +18,7 @@
   // Wails auto-generated Go bindings
   import {
     StartDownload,
+    StartDownloadWithHeaders,
     ScheduleDownload,
     GetAllDownloads,
     StopDownload,
@@ -51,6 +52,7 @@
   let isSettingsModalOpen = $state(false);
   let externalPromptUrl = $state("");
   let externalPromptFilename = $state("");
+  let externalPromptHeaders = $state<Record<string, string> | null>(null);
 
   // Status Bar State
   let showStatusBar = $state(
@@ -155,7 +157,7 @@
         MinMultiPartDownload: current?.MinMultiPartDownload || 5 * 1024 * 1024,
         SpeedLimit: targetLimit,
         BrowserDownloadAction: current?.BrowserDownloadAction || "prompt",
-        BrowserAutoForeground: current?.BrowserAutoForeground || false
+        BrowserAutoForeground: current?.BrowserAutoForeground || false,
       });
       await loadSettings();
     } catch (e) {
@@ -296,6 +298,7 @@
     filename: string,
     dir: string,
     scheduledUnix?: number | null,
+    headers?: Record<string, string> | null,
   ) {
     try {
       if (scheduledUnix && scheduledUnix > 0) {
@@ -305,16 +308,17 @@
           hour: "2-digit",
           minute: "2-digit",
         });
-        showToast(`Download started for ${timeStr}`, "success");
+        showToast(`Download scheduled for ${timeStr}`, "success");
+      } else if (headers && Object.keys(headers).length > 0) {
+        await StartDownloadWithHeaders(url, filename, dir, headers);
+        showToast("Download started", "success");
       } else {
         await StartDownload(url, filename, dir);
         showToast("Download started", "success");
       }
       await loadDownloads();
     } catch (e: any) {
-      console.error("AddDownload error:", e);
       showToast(e?.message || "Failed to add download", "error");
-      throw e;
     }
   }
 
@@ -566,8 +570,8 @@
             hasCompleted = true;
             loadDownloads();
           }
-          loadDownloads()
-          continue
+          loadDownloads();
+          continue;
         }
       }
 
@@ -589,6 +593,7 @@
     EventsOn("download:external_prompt", (data: any) => {
       externalPromptUrl = data.url || "";
       externalPromptFilename = data.filename || "";
+      externalPromptHeaders = data.headers || null;
       isAddModalOpen = true;
     });
 
@@ -674,17 +679,19 @@
     bind:open={isAddModalOpen}
     initialUrl={externalPromptUrl}
     initialFilename={externalPromptFilename}
+    initialHeaders={externalPromptHeaders}
     onClose={() => {
       externalPromptUrl = "";
       externalPromptFilename = "";
+      externalPromptHeaders = null;
     }}
-    onSubmit={async (url, filename, dir, scheduledUnix) => {
-      await handleAddDownload(url, filename, dir, scheduledUnix);
+    onSubmit={async (url, filename, dir, scheduledUnix, headers) => {
+      await handleAddDownload(url, filename, dir, scheduledUnix, headers);
       externalPromptUrl = "";
       externalPromptFilename = "";
+      externalPromptHeaders = null;
     }}
   />
-
   <!-- Delete Confirmation Modal Dialog -->
   <DeleteConfirmModal
     bind:open={isDeleteModalOpen}

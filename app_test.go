@@ -307,3 +307,61 @@ func TestIPC_Download_WithHeadersAndCookies(t *testing.T) {
 		t.Errorf("expected Authorization header Bearer test_token, got %s", persisted.Headers["Authorization"])
 	}
 }
+
+func TestIPC_UpdateSettings_DynamicSwitch(t *testing.T) {
+	tempDB := filepath.Join(t.TempDir(), "ipc_dynamic_settings_test.db")
+	repo, err := downloader.NewSQLiteRepository(tempDB)
+	if err != nil {
+		t.Fatalf("failed to init repo: %v", err)
+	}
+
+	_ = repo.SetSettings("browser_download_action", "auto")
+	settings := downloader.Settings{
+		BrowserDownloadAction: "auto",
+	}
+
+	manager := downloader.NewDownloadManager(repo, &settings)
+	app := &App{
+		repo:     repo,
+		manager:  manager,
+		settings: settings,
+	}
+
+	// 1. Initial download with "auto" should return a download ID
+	msgAuto := IPCMessage{
+		Action:   "download",
+		URL:      "https://example.com/test1.zip",
+		Filename: "test1.zip",
+	}
+	respAuto := sendIPCRequest(t, app, msgAuto)
+	if respAuto.Status != "ok" || respAuto.ID == "" {
+		t.Fatalf("expected auto mode to start download with ID, got %+v", respAuto)
+	}
+
+	// 2. Switch setting to "prompt" via IPC update_settings
+	updateMsg := IPCMessage{
+		Action: "update_settings",
+		Key:    "browser_download_action",
+		Value:  "prompt",
+	}
+	updateResp := sendIPCRequest(t, app, updateMsg)
+	if updateResp.Status != "ok" {
+		t.Fatalf("expected update_settings ok, got %+v", updateResp)
+	}
+
+	// Verify in-memory settings were immediately updated
+	if app.settings.BrowserDownloadAction != "prompt" {
+		t.Errorf("expected in-memory setting 'prompt', got '%s'", app.settings.BrowserDownloadAction)
+	}
+
+	// 3. Subsequent download should now return "prompted" message rather than auto-starting
+	msgPrompt := IPCMessage{
+		Action:   "download",
+		URL:      "https://example.com/test2.zip",
+		Filename: "test2.zip",
+	}
+	respPrompt := sendIPCRequest(t, app, msgPrompt)
+	if respPrompt.Status != "ok" || respPrompt.Message != "prompted" {
+		t.Fatalf("expected prompt mode to return prompted message, got %+v", respPrompt)
+	}
+}

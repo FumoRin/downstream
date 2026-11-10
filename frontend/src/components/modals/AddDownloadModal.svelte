@@ -12,7 +12,7 @@
     ClockIcon,
     CalendarBlankIcon,
   } from "phosphor-svelte";
-  import { ProbeURL } from "../../../wailsjs/go/main/App";
+  import { ProbeURL, ProbeURLWithHeaders } from "../../../wailsjs/go/main/App";
   import { formatBytes } from "../../utils/formatters";
   import type { downloader } from "../../../wailsjs/go/models";
 
@@ -24,9 +24,11 @@
       filename: string,
       dir: string,
       scheduledUnix?: number | null,
+      headers?: Record<string, string> | null,
     ) => Promise<void>;
     initialUrl?: string;
     initialFilename?: string;
+    initialHeaders?: Record<string, string> | null;
   }
 
   let {
@@ -35,6 +37,7 @@
     onSubmit,
     initialUrl = "",
     initialFilename = "",
+    initialHeaders = null,
   }: Props = $props();
 
   let step = $state<"url" | "confirm">("url");
@@ -97,7 +100,10 @@
     errorMsg = "";
     isProbing = true;
     try {
-      const info = await ProbeURL(url.trim());
+      const info =
+        initialHeaders && Object.keys(initialHeaders).length > 0
+          ? await ProbeURLWithHeaders(url.trim(), initialHeaders)
+          : await ProbeURL(url.trim());
       if (!info) {
         throw new Error("Unable to reach server. Please check the URL.");
       }
@@ -142,6 +148,7 @@
           filename.trim(),
           customDir.trim(),
           scheduledUnix,
+          initialHeaders
         );
       }
       handleClose();
