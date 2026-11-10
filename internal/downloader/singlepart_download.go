@@ -28,6 +28,8 @@ func singlepartDownload(id string, url string, info *TargetInfo, opts DownloadOp
 		if err != nil {
 			return 0, "", err
 		}
+
+		applyHeaders(req, opts.Headers)
 		
 		if currentSize > 0 {
 			req.Header.Add("Range", fmt.Sprintf("bytes=%d-", currentSize))

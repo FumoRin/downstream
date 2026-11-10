@@ -28,12 +28,14 @@ type App struct {
 }
 
 type IPCMessage struct {
-	Action   string `json:"action"`
-	URL      string `json:"url"`
-	Filename string `json:"filename,omitempty"`
-	Referrer string `json:"referrer,omitempty"`
-	Key      string `json:"key,omitempty"`
-	Value    string `json:"value,omitempty"`
+	Action   string            `json:"action"`
+	URL      string            `json:"url"`
+	Filename string            `json:"filename,omitempty"`
+	Referrer string            `json:"referrer,omitempty"`
+	Key      string            `json:"key,omitempty"`
+	Value    string            `json:"value,omitempty"`
+	Cookies  string            `json:"cookies,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty"`
 }
 
 type IPCResponse struct {
@@ -154,8 +156,22 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 			return
 		}
 
+		// Prepare headers map from incoming IPC payload
+		headers := make(map[string]string)
+		for k, v := range msg.Headers {
+			headers[k] = v
+		}
+		if msg.Cookies != "" {
+			headers["Cookie"] = msg.Cookies
+		}
+		if msg.Referrer != "" && headers["Referer"] == "" {
+			headers["Referer"] = msg.Referrer
+		}
+
 		action := "prompt"
-		if a.repo != nil {
+		if a.settings.BrowserDownloadAction != "" {
+			action = a.settings.BrowserDownloadAction
+		} else if a.repo != nil {
 			if s, err := a.repo.GetAllSettings(); err == nil && s.BrowserDownloadAction != "" {
 				action = s.BrowserDownloadAction
 			}
@@ -167,12 +183,17 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 				a.showWindow()
 			}
 
-			// Emit event for frontend to open AddDownload confirmation modal
-			a.emitEvent("download:external_prompt", map[string]string{
+			promptPayload := map[string]interface{}{
 				"url":      msg.URL,
 				"filename": msg.Filename,
 				"referrer": msg.Referrer,
-			})
+			}
+			if len(headers) > 0 {
+				promptPayload["headers"] = headers
+			}
+
+			// Emit event for frontend to open AddDownload confirmation modal
+			a.emitEvent("download:external_prompt", promptPayload)
 
 			_ = json.NewEncoder(conn).Encode(IPCResponse{
 				Status:  "ok",
@@ -182,12 +203,10 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 		}
 
 		if action == "auto" {
-			autoForeground := false
-			if a.repo != nil {
+			autoForeground := a.settings.BrowserAutoForeground
+			if !autoForeground && a.repo != nil {
 				if s, err := a.repo.GetAllSettings(); err == nil {
-					if s.BrowserAutoForeground {
-						autoForeground = true
-					}
+					autoForeground = s.BrowserAutoForeground
 				}
 			}
 
@@ -195,10 +214,9 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 				a.showWindow()
 			}
 		}
-
-		// Otherwise: "auto" mode (start silently)
+		// Otherwise: "auto" mode (start silently with headers)
 		id := uuid.NewString()
-		a.manager.StartDownload(id, msg.URL, msg.Filename, "", nil)
+		a.manager.StartDownloadWithHeaders(id, msg.URL, msg.Filename, "", headers, nil)
 
 		// Notify Wails frontend so the UI refreshes and pops a toast
 		a.emitEvent("download:external_added", map[string]string{
@@ -211,7 +229,6 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 			Status: "ok",
 			ID:     id,
 		})
-
 	default:
 		_ = json.NewEncoder(conn).Encode(IPCResponse{
 			Status:  "error",
@@ -275,6 +292,10 @@ func (a *App) shutdown(ctx context.Context) {
 // === Exported Go Methods to Wails ===
 
 func (a *App) ProbeURL(url string) (*downloader.TargetInfo, error) {
+	return a.ProbeURLWithHeaders(url, nil)
+}
+
+func (a *App) ProbeURLWithHeaders(url string, headers map[string]string) (*downloader.TargetInfo, error) {
 	if url == "" {
 		return nil, fmt.Errorf("URL cannot be empty")
 	}
@@ -282,15 +303,19 @@ func (a *App) ProbeURL(url string) (*downloader.TargetInfo, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return downloader.ProbeURL(ctx, url)
+	return downloader.ProbeURLWithHeaders(ctx, url, headers)
 }
 
 func (a *App) StartDownload(url, customFilename, customDir string) (string, error) {
+	return a.StartDownloadWithHeaders(url, customFilename, customDir, nil)
+}
+
+func (a *App) StartDownloadWithHeaders(url, customFilename, customDir string, headers map[string]string) (string, error) {
 	if url == "" {
 		return "", fmt.Errorf("URL cannot be empty")
 	}
 	id := uuid.NewString()
-	a.manager.StartDownload(id, url, customFilename, customDir, nil)
+	a.manager.StartDownloadWithHeaders(id, url, customFilename, customDir, headers, nil)
 	return id, nil
 }
 
@@ -304,7 +329,7 @@ func (a *App) ResumeDownload(id string) error {
 		return fmt.Errorf("download not found")
 	}
 
-	a.manager.StartDownload(id, state.URL, state.Filename, "", nil)
+	a.manager.StartDownloadWithHeaders(id, state.URL, state.Filename, "", state.Headers, nil)
 	return nil
 }
 

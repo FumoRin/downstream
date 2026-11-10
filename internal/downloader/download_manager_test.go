@@ -1,6 +1,8 @@
 package downloader
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +11,69 @@ import (
 	"testing"
 	"time"
 )
+
+func TestDownloadWithHeaders_AuthenticationAndCookies(t *testing.T) {
+	payload := []byte("confidential user content 1234567890")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie := r.Header.Get("Cookie")
+		auth := r.Header.Get("Authorization")
+
+		if cookie != "session_id=secret123" || auth != "Bearer token_xyz" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		http.ServeContent(w, r, "secure.bin", time.Now(), bytes.NewReader(payload))
+	}))
+	defer server.Close()
+
+	tempDir := t.TempDir()
+	originalWd, _ := os.Getwd()
+	_ = os.Chdir(tempDir)
+	defer func() {
+		_ = os.Chdir(originalWd)
+	}()
+
+	headers := map[string]string{
+		"Cookie":        "session_id=secret123",
+		"Authorization": "Bearer token_xyz",
+		"User-Agent":    "DownstreamTest/1.0",
+	}
+
+	// 1. ProbeURL without headers must fail (401 Unauthorized)
+	_, err := ProbeURL(context.Background(), server.URL)
+	if err == nil {
+		t.Error("expected error probing without authentication headers, got nil")
+	}
+
+	// 2. ProbeURLWithHeaders with headers must succeed
+	info, err := ProbeURLWithHeaders(context.Background(), server.URL, headers)
+	if err != nil {
+		t.Fatalf("ProbeURLWithHeaders failed: %v", err)
+	}
+	if info.TotalSize != int64(len(payload)) {
+		t.Errorf("expected size %d, got %d", len(payload), info.TotalSize)
+	}
+
+	// 3. Download with headers must succeed and write file
+	opts := DownloadOptions{
+		Filename: "secure.bin",
+		Headers:  headers,
+		Progress: make(chan Progress, 10),
+	}
+	totalSize, finalFilename, err := Download("secure-job-1", server.URL, opts, context.Background())
+	if err != nil {
+		t.Fatalf("Download failed: %v", err)
+	}
+	if totalSize != int64(len(payload)) {
+		t.Errorf("expected size %d, got %d", len(payload), totalSize)
+	}
+
+	content, err := os.ReadFile(finalFilename)
+	if err != nil || !bytes.Equal(content, payload) {
+		t.Errorf("file content mismatch, got %s, expected %s", string(content), string(payload))
+	}
+}
 
 func TestDownloadManagerQueue(t *testing.T) {
 	payload := []byte("small file content")
@@ -61,7 +126,7 @@ func TestDownloadManagerStop(t *testing.T) {
 	repo, err := NewSQLiteRepository(dbPath)
 	if err != nil {
 		t.Fatalf("failed to create repo: %v", err)
-	}	
+	}
 	setting, err := repo.GetAllSettings()
 	if err != nil {
 		t.Fatalf("failed to retrieved settings: %v", err)

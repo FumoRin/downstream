@@ -12,12 +12,14 @@ import (
 )
 
 type NativeMessage struct {
-	Action   string `json:"action"`
-	URL      string `json:"url"`
-	Filename string `json:"filename,omitempty"`
-	Referrer string `json:"referrer,omitempty"`
-	Key      string `json:"key,omitempty"`
-	Value    string `json:"value,omitempty"`
+	Action   string            `json:"action"`
+	URL      string            `json:"url"`
+	Filename string            `json:"filename,omitempty"`
+	Referrer string            `json:"referrer,omitempty"`
+	Key      string            `json:"key,omitempty"`
+	Value    string            `json:"value,omitempty"`
+	Cookies  string            `json:"cookies,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty"`
 }
 
 type NativeResponse struct {

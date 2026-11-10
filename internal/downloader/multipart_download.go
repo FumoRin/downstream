@@ -61,7 +61,7 @@ func multipartDownload(id string, url string, info *TargetInfo, opts DownloadOpt
 		go func(p *PartState) {
 			defer wg.Done()
 
-			if err := downloadParts(workerCtx, client, url, file, p, opts.Repo, &totalDownload, opts.Limiter); err != nil {
+			if err := downloadParts(workerCtx, client, url, file, p, opts.Repo, &totalDownload, opts.Limiter, opts.Headers); err != nil {
 				select {
 				case errChan <- err:
 				default:
@@ -224,6 +224,7 @@ func downloadParts(
 	repo DownloadRepository,
 	totalDownloaded *atomic.Int64,
 	limiter *rate.Limiter,
+	headers map[string]string,
 ) error {
 	if part.StartByte+part.CurrentByte > part.EndByte {
 		return nil
@@ -231,7 +232,7 @@ func downloadParts(
 
 	var lastErr error
 	for attempt := range defaultMaxRetries {
-		lastErr = downloadPartAttempt(ctx, client, url, file, part, repo, totalDownloaded, limiter)
+		lastErr = downloadPartAttempt(ctx, client, url, file, part, repo, totalDownloaded, limiter, headers)
 		if lastErr == nil {
 			return nil
 		}
@@ -260,6 +261,7 @@ func downloadPartAttempt(
 	repo DownloadRepository,
 	totalDownloaded *atomic.Int64,
 	limiter *rate.Limiter,
+	headers map[string]string,
 ) error {
 	reqStart := part.StartByte + part.CurrentByte
 	if reqStart > part.EndByte {
@@ -271,6 +273,7 @@ func downloadPartAttempt(
 		return err
 	}
 
+	applyHeaders(req, headers)
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", reqStart, part.EndByte))
 	resp, err := client.Do(req)
 	if err != nil {

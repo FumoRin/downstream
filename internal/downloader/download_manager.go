@@ -19,6 +19,11 @@ func (m *DownloadManager) StartWorker(count int) {
 
 // StartDownload Start a Download
 func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, limiters ...*rate.Limiter) {
+	m.StartDownloadWithHeaders(generatedID, url, filename, dir, nil, limiters...)
+}
+
+// StartDownloadWithHeaders starts a download with optional custom request headers (cookies, auth, etc.)
+func (m *DownloadManager) StartDownloadWithHeaders(generatedID, url, filename, dir string, headers map[string]string, limiters ...*rate.Limiter) {
 	var limiter *rate.Limiter
 	if len(limiters) > 0 && limiters[0] != nil {
 		limiter = limiters[0]
@@ -40,7 +45,10 @@ func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, 
 			Filename:  filename,
 			Category:  catName,
 			TotalSize: 0,
+			Headers:   headers,
 		}
+	} else if len(headers) > 0 {
+		state.Headers = headers
 	}
 	state.Status = StateQueue
 
@@ -60,7 +68,7 @@ func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, 
 		m.wg.Done()
 		return
 
-	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Dir: dir, Limiter: limiter}:
+	case m.job <- DownloadJob{ID: generatedID, URL: url, Filename: filename, Dir: dir, Limiter: limiter, Headers: state.Headers}:
 		return
 	}
 }
@@ -207,6 +215,7 @@ func (m *DownloadManager) processJob(job DownloadJob) {
 		Repo:     m.repo,
 		Settings: m.settings,
 		Limiter:  job.Limiter,
+		Headers:  job.Headers,
 	}
 
 	totalSize, filename, downloadErr := Download(job.ID, job.URL, opts, ctx)

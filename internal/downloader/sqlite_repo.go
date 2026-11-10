@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -64,6 +65,14 @@ var migrations = []migration{
 			}
 
 			return nil
+		},
+	},
+	{
+		version:     2,
+		description: "Add headers column for authentication and cookie to download_metadata",
+		run: func(tx *sql.Tx) error {
+			_, err := tx.Exec("ALTER TABLE download_metadata ADD COLUMN headers TEXT;")
+			return err
 		},
 	},
 }
@@ -182,18 +191,26 @@ func (r *SQLiteRepository) SaveDownload(state *DownloadState) error {
 		scheduledUnix = sql.NullInt64{Int64: state.ScheduledAt.Unix(), Valid: true}
 	}
 
+	var headerJSON sql.NullString
+	if len(state.Headers) > 0 {
+		if data, err := json.Marshal(state.Headers); err == nil {
+			headerJSON = sql.NullString{String: string(data), Valid: true}
+		}
+	}
+
 	query := `
-	INSERT INTO download_metadata (id, url, filename, categories, total_size, status, scheduled_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO download_metadata (id, url, filename, categories, total_size, status, headers, scheduled_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET 
 		url = excluded.url,
 		filename = excluded.filename,
 		categories = excluded.categories,
 		total_size = excluded.total_size,
 		status = excluded.status,
+		headers = excluded.headers,
 		scheduled_at = excluded.scheduled_at;
 	`
-	_, err := r.db.Exec(query, state.ID, state.URL, state.Filename, state.Category, state.TotalSize, state.Status, scheduledUnix)
+	_, err := r.db.Exec(query, state.ID, state.URL, state.Filename, state.Category, state.TotalSize, state.Status, headerJSON, scheduledUnix)
 	if err != nil {
 		return err
 	}
@@ -205,8 +222,9 @@ func (r *SQLiteRepository) GetDownload(id string) (*DownloadState, error) {
 	state := &DownloadState{}
 	var status int
 	var scheduledUnix sql.NullInt64
+	var headerJSON sql.NullString
 
-	err := r.db.QueryRow("SELECT id, url, filename, categories, total_size, status, scheduled_at FROM download_metadata WHERE id = ?", id).Scan(&state.ID, &state.URL, &state.Filename, &state.Category, &state.TotalSize, &status, &scheduledUnix)
+	err := r.db.QueryRow("SELECT id, url, filename, categories, total_size, status, headers, scheduled_at FROM download_metadata WHERE id = ?", id).Scan(&state.ID, &state.URL, &state.Filename, &state.Category, &state.TotalSize, &status, &headerJSON, &scheduledUnix)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -219,6 +237,9 @@ func (r *SQLiteRepository) GetDownload(id string) (*DownloadState, error) {
 		t := time.Unix(scheduledUnix.Int64, 0)
 		state.ScheduledAt = &t
 	}
+	if headerJSON.Valid && headerJSON.String != "" {
+		_ = json.Unmarshal([]byte(headerJSON.String), &state.Headers)
+	}
 	return state, nil
 }
 
@@ -228,7 +249,9 @@ func scanDownloadRows(rows *sql.Rows) ([]*DownloadState, error) {
 		s := &DownloadState{}
 		var status int
 		var scheduledUnix sql.NullInt64
-		if err := rows.Scan(&s.ID, &s.URL, &s.Filename, &s.Category, &s.TotalSize, &status, &scheduledUnix); err != nil {
+		var headersJSON sql.NullString
+
+		if err := rows.Scan(&s.ID, &s.URL, &s.Filename, &s.Category, &s.TotalSize, &status, &headersJSON, &scheduledUnix); err != nil {
 			return nil, err
 		}
 		s.Status = DownloadStatus(status)
@@ -237,12 +260,16 @@ func scanDownloadRows(rows *sql.Rows) ([]*DownloadState, error) {
 			s.ScheduledAt = &t
 		}
 		states = append(states, s)
+
+		if headersJSON.Valid && headersJSON.String != "" {
+			_ = json.Unmarshal([]byte(headersJSON.String), &s.Headers)
+		}
 	}
 	return states, rows.Err()
 }
 
 func (r *SQLiteRepository) GetIncompleteDownload() ([]*DownloadState, error) {
-	rows, err := r.db.Query("SELECT id, url, filename, categories, total_size, status, scheduled_at FROM download_metadata WHERE status != ?", StateCompleted)
+	rows, err := r.db.Query("SELECT id, url, filename, categories, total_size, status, headers, scheduled_at FROM download_metadata WHERE status != ?", StateCompleted)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +282,7 @@ func (r *SQLiteRepository) GetIncompleteDownload() ([]*DownloadState, error) {
 }
 
 func (r *SQLiteRepository) GetAllDownloads() ([]*DownloadState, error) {
-	rows, err := r.db.Query("SELECT id, url, filename, categories, total_size, status, scheduled_at FROM download_metadata")
+	rows, err := r.db.Query("SELECT id, url, filename, categories, total_size, status, headers, scheduled_at FROM download_metadata")
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +436,7 @@ func (r *SQLiteRepository) GetAllSettings() (*Settings, error) {
 				settings.BrowserDownloadAction = val
 			}
 		case "browser_auto_foreground":
-		if b, err := strconv.ParseBool(val); err == nil {
+			if b, err := strconv.ParseBool(val); err == nil {
 				settings.BrowserAutoForeground = b
 			}
 		}
@@ -493,7 +520,7 @@ func (r *SQLiteRepository) GetCategories() ([]*Category, error) {
 
 func (r *SQLiteRepository) GetDueScheduledDownloads(now time.Time) ([]*DownloadState, error) {
 	query := `
-	SELECT id, url, filename, categories, total_size, status, scheduled_at
+	SELECT id, url, filename, categories, total_size, status, headers, scheduled_at
 	FROM download_metadata
 	WHERE status = ? AND scheduled_at IS NOT NULL AND scheduled_at <= ?
 	`

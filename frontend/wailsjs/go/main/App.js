@@ -30,6 +30,10 @@ export function ProbeURL(arg1) {
   return window['go']['main']['App']['ProbeURL'](arg1);
 }
 
+export function ProbeURLWithHeaders(arg1, arg2) {
+  return window['go']['main']['App']['ProbeURLWithHeaders'](arg1, arg2);
+}
+
 export function ResumeDownload(arg1) {
   return window['go']['main']['App']['ResumeDownload'](arg1);
 }
@@ -48,6 +52,10 @@ export function ShowInFolder(arg1) {
 
 export function StartDownload(arg1, arg2, arg3) {
   return window['go']['main']['App']['StartDownload'](arg1, arg2, arg3);
+}
+
+export function StartDownloadWithHeaders(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['StartDownloadWithHeaders'](arg1, arg2, arg3, arg4);
 }
 
 export function StopDownload(arg1) {

@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -9,15 +10,28 @@ import (
 	"time"
 )
 
-// ProbeURL tests reachability and retrieves remote file metadata (filename, size, multi-part support)
-func ProbeURL(ctx context.Context, rawURL string) (*TargetInfo, error) {
+// applyHeaders injects custom headers (e.g. Cookie, Authorization, User-Agent) into an outgoing http.Request
+func applyHeaders(req *http.Request, headers map[string]string) {
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+}
+
+// ProbeURLWithHeaders tests reachability using provided request headers (cookies, auth tokens, etc.)
+func ProbeURLWithHeaders(ctx context.Context, rawURL string, headers map[string]string) (*TargetInfo, error) {
 	client := &http.Client{
 		Timeout: 15 * time.Second,
 	}
 	opts := DownloadOptions{
-		URL: rawURL,
+		URL:     rawURL,
+		Headers: headers,
 	}
 	return probeServerSupport(ctx, client, rawURL, opts)
+}
+
+// ProbeURL tests reachability and retrieves remote file metadata (filename, size, multi-part support)
+func ProbeURL(ctx context.Context, rawURL string) (*TargetInfo, error) {
+	return ProbeURLWithHeaders(ctx, rawURL, nil)
 }
 
 func supportsMultiPart(resp *http.Response) bool {
@@ -41,6 +55,7 @@ func probeServerSupport(ctx context.Context, client *http.Client, url string, op
 	if err != nil {
 		return nil, err
 	}
+	applyHeaders(req, opts.Headers)
 
 	resp, err := client.Do(req)
 	if err == nil {
@@ -61,6 +76,7 @@ func probeServerSupport(ctx context.Context, client *http.Client, url string, op
 		return nil, err
 	}
 
+	applyHeaders(getReq, opts.Headers)
 	getReq.Header.Set("Range", "bytes=0-0")
 
 	getResp, err := client.Do(getReq)
@@ -72,6 +88,10 @@ func probeServerSupport(ctx context.Context, client *http.Client, url string, op
 		_, _ = io.Copy(io.Discard, getResp.Body)
 		_ = getResp.Body.Close()
 	}()
+
+	if getResp.StatusCode >= 400 {
+		return nil, fmt.Errorf("probe failed with status: %d %s", getResp.StatusCode, http.StatusText(getResp.StatusCode))
+	}
 
 	filename := resolveFilename(url, opts, getResp)
 	if getResp.StatusCode == http.StatusPartialContent {

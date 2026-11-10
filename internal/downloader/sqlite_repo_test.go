@@ -133,19 +133,19 @@ func TestSQLiteRepository_SchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetSchemaVersion failed: %v", err)
 	}
-	if version != 1 {
-		t.Errorf("expected schema version 1, got %d", version)
+	if version != 2 {
+		t.Errorf("expected schema version 2, got %d", version)
 	}
 	_ = repo.Close()
 
-	// Reopening must remain idempotent at version 1 without error
+	// Reopening must remain idempotent at version 2 without error
 	reopened, err := NewSQLiteRepository(dbPath)
 	if err != nil {
 		t.Fatalf("failed to reopen repo: %v", err)
 	}
 	reopenedVer, _ := reopened.GetSchemaVersion()
-	if reopenedVer != 1 {
-		t.Errorf("expected schema version 1 on reopen, got %d", reopenedVer)
+	if reopenedVer != 2 {
+		t.Errorf("expected schema version 2 on reopen, got %d", reopenedVer)
 	}
 }
 
@@ -172,5 +172,51 @@ func TestSQLiteRepository_VersionGuard(t *testing.T) {
 	v, _ := reopened.GetSchemaVersion()
 	if v != 99 {
 		t.Errorf("expected version to remain 99, got %d", v)
+	}
+}
+
+func TestSQLiteRepository_HeadersPersistence(t *testing.T) {
+	tempDir := t.TempDir()
+	repo, err := NewSQLiteRepository(filepath.Join(tempDir, "headers_test.db"))
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
+
+	state := &DownloadState{
+		ID:        "auth-dl-1",
+		URL:       "https://example.com/protected.zip",
+		Filename:  "protected.zip",
+		TotalSize: 1024,
+		Status:    StateQueue,
+		Headers: map[string]string{
+			"Cookie":        "session_id=abcdef123456",
+			"Authorization": "Bearer token_xyz",
+			"User-Agent":    "Downstream/1.0",
+		},
+	}
+
+	if err := repo.SaveDownload(state); err != nil {
+		t.Fatalf("SaveDownload failed: %v", err)
+	}
+
+	// 1. Verify via GetDownload
+	got, err := repo.GetDownload("auth-dl-1")
+	if err != nil || got == nil {
+		t.Fatalf("GetDownload failed: %v", err)
+	}
+	if got.Headers == nil || got.Headers["Cookie"] != "session_id=abcdef123456" {
+		t.Errorf("expected Cookie header preserved, got %+v", got.Headers)
+	}
+	if got.Headers["Authorization"] != "Bearer token_xyz" {
+		t.Errorf("expected Authorization header preserved, got %+v", got.Headers)
+	}
+
+	// 2. Verify via GetAllDownloads
+	all, err := repo.GetAllDownloads()
+	if err != nil || len(all) != 1 {
+		t.Fatalf("GetAllDownloads failed: %v", err)
+	}
+	if all[0].Headers == nil || all[0].Headers["User-Agent"] != "Downstream/1.0" {
+		t.Errorf("expected User-Agent in GetAllDownloads, got %+v", all[0].Headers)
 	}
 }

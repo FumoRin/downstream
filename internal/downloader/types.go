@@ -30,6 +30,7 @@ type DownloadOptions struct {
 	Repo     DownloadRepository
 	Settings *Settings
 	Limiter  *rate.Limiter
+	Headers  map[string]string
 }
 
 type DownloadJob struct {
@@ -38,6 +39,7 @@ type DownloadJob struct {
 	Dir      string
 	Filename string
 	Limiter  *rate.Limiter
+	Headers  map[string]string
 }
 
 type DownloadManager struct {
@@ -57,16 +59,17 @@ type DownloadManager struct {
 }
 
 type DownloadState struct {
-	ID          string         `json:"id"`
-	URL         string         `json:"url"`
-	Filename    string         `json:"filename"`
-	Category    string         `json:"category"`
-	TotalSize   int64          `json:"totalSize"`
-	CurrentSize int64          `json:"currentSize"`
-	Percentage  float64        `json:"percentage"`
-	Status      DownloadStatus `json:"status"`
-	ScheduledAt *time.Time     `json:"scheduledAt"`
-	Parts       []*PartState   `json:"parts,omitempty"`
+	ID          string            `json:"id"`
+	URL         string            `json:"url"`
+	Filename    string            `json:"filename"`
+	Category    string            `json:"category"`
+	TotalSize   int64             `json:"totalSize"`
+	CurrentSize int64             `json:"currentSize"`
+	Percentage  float64           `json:"percentage"`
+	Status      DownloadStatus    `json:"status"`
+	ScheduledAt *time.Time        `json:"scheduledAt"`
+	Parts       []*PartState      `json:"parts,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
 }
 
 type ProgressWriter struct {

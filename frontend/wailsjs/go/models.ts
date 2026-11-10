@@ -48,6 +48,7 @@ export namespace downloader {
 	    // Go type: time
 	    scheduledAt?: any;
 	    parts?: PartState[];
+	    headers?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new DownloadState(source);
@@ -65,6 +66,7 @@ export namespace downloader {
 	        this.status = source["status"];
 	        this.scheduledAt = this.convertValues(source["scheduledAt"], null);
 	        this.parts = this.convertValues(source["parts"], PartState);
+	        this.headers = source["headers"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

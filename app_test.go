@@ -260,3 +260,50 @@ func TestApp_ShowInFolder_Validation(t *testing.T) {
 		t.Error("expected error for empty path, got nil")
 	}
 }
+
+func TestIPC_Download_WithHeadersAndCookies(t *testing.T) {
+	tempDB := filepath.Join(t.TempDir(), "ipc_headers_test.db")
+	repo, err := downloader.NewSQLiteRepository(tempDB)
+	if err != nil {
+		t.Fatalf("failed to init repo: %v", err)
+	}
+
+	_ = repo.SetSettings("browser_download_action", "auto")
+	settings := downloader.Settings{
+		BrowserDownloadAction: "auto",
+	}
+
+	manager := downloader.NewDownloadManager(repo, &settings)
+	app := &App{
+		repo:     repo,
+		manager:  manager,
+		settings: settings,
+	}
+
+	msg := IPCMessage{
+		Action:   "download",
+		URL:      "https://example.com/file.zip",
+		Filename: "file.zip",
+		Cookies:  "session=abc123xyz",
+		Headers: map[string]string{
+			"Authorization": "Bearer test_token",
+		},
+	}
+
+	resp := sendIPCRequest(t, app, msg)
+	if resp.Status != "ok" || resp.ID == "" {
+		t.Fatalf("expected status ok with download ID, got %+v", resp)
+	}
+
+	// Verify headers and cookies were persisted in SQLite
+	persisted, err := repo.GetDownload(resp.ID)
+	if err != nil || persisted == nil {
+		t.Fatalf("failed to fetch persisted download: %v", err)
+	}
+	if persisted.Headers["Cookie"] != "session=abc123xyz" {
+		t.Errorf("expected Cookie header session=abc123xyz, got %s", persisted.Headers["Cookie"])
+	}
+	if persisted.Headers["Authorization"] != "Bearer test_token" {
+		t.Errorf("expected Authorization header Bearer test_token, got %s", persisted.Headers["Authorization"])
+	}
+}
