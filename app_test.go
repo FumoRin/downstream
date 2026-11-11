@@ -365,3 +365,12 @@ func TestIPC_UpdateSettings_DynamicSwitch(t *testing.T) {
 		t.Fatalf("expected prompt mode to return prompted message, got %+v", respPrompt)
 	}
 }
+
+func TestApp_SendDesktopNotification(t *testing.T) {
+	app := NewApp()
+	// Should gracefully return nil when ctx is nil
+	err := app.SendDesktopNotification("Downstream", "Test download message")
+	if err != nil {
+		t.Fatalf("expected nil error when ctx is nil, got %v", err)
+	}
+}

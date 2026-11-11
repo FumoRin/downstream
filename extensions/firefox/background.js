@@ -59,15 +59,11 @@ async function forwardToDownstream(targetUrl, filename, referrer, storeId) {
     );
     if (response && response.status === "error") {
       console.error("[Downstream] Error from desktop:", response.message);
-      notify(
-        "Downstream Error",
-        response.message || "Failed to start download",
-      );
     } else if (response && response.status === "ok") {
       if (response.message === "prompted") {
         console.log(`Opening confirmation dialog for: ${displayName}`);
       } else {
-        notify("Downstream", `Started downloading: ${displayName}`);
+        console.log(`[Downstream] Started downloading: ${displayName}`);
       }
     }
   } catch (err) {

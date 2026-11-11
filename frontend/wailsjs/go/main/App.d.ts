@@ -24,6 +24,8 @@ export function ScheduleDownload(arg1:string,arg2:string,arg3:string,arg4:number
 
 export function SelectDirectory():Promise<string>;
 
+export function SendDesktopNotification(arg1:string,arg2:string):Promise<void>;
+
 export function ShowInFolder(arg1:string):Promise<void>;
 
 export function StartDownload(arg1:string,arg2:string,arg3:string):Promise<string>;

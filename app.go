@@ -234,6 +234,12 @@ func (a *App) handleIPCConnection(conn net.Conn) {
 			"filename": msg.Filename,
 		})
 
+		displayName := msg.Filename
+		if displayName == "" {
+			displayName = downloader.FallbackFilenameFromURL(msg.URL)
+		}
+		_ = a.SendDesktopNotification("Downstream", fmt.Sprintf("Started downloading: %s", displayName))
+
 		_ = json.NewEncoder(conn).Encode(IPCResponse{
 			Status: "ok",
 			ID:     id,
@@ -252,6 +258,9 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if err := wailsRuntime.InitializeNotifications(ctx); err != nil {
+		wailsRuntime.LogWarningf(ctx, "failed to initialize desktop notification: %v", err)
+	}
 
 	configDir, err := os.UserConfigDir()
 	var dbPath string
@@ -287,6 +296,7 @@ func (a *App) startup(ctx context.Context) {
 
 // Shutdown called by Wails when the desktop window is closed
 func (a *App) shutdown(ctx context.Context) {
+	wailsRuntime.CleanupNotifications(ctx)
 	if a.ipcListener != nil {
 		_ = a.ipcListener.Close()
 	}
@@ -299,6 +309,18 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 // === Exported Go Methods to Wails ===
+
+// SendDesktopNotification emits a native OS notification from the Downstream desktop GUI
+func (a *App) SendDesktopNotification(title, message string) error {
+	if a.ctx == nil {
+		return nil
+	}
+	return wailsRuntime.SendNotification(a.ctx, wailsRuntime.NotificationOptions{
+		ID:    uuid.NewString(),
+		Title: title,
+		Body:  message,
+	})
+}
 
 func (a *App) ProbeURL(url string) (*downloader.TargetInfo, error) {
 	return a.ProbeURLWithHeaders(url, nil)

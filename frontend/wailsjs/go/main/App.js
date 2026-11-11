@@ -46,6 +46,10 @@ export function SelectDirectory() {
   return window['go']['main']['App']['SelectDirectory']();
 }
 
+export function SendDesktopNotification(arg1, arg2) {
+  return window['go']['main']['App']['SendDesktopNotification'](arg1, arg2);
+}
+
 export function ShowInFolder(arg1) {
   return window['go']['main']['App']['ShowInFolder'](arg1);
 }
