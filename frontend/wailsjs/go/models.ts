@@ -47,6 +47,8 @@ export namespace downloader {
 	    status: number;
 	    // Go type: time
 	    scheduledAt?: any;
+	    // Go type: time
+	    createdAt: any;
 	    parts?: PartState[];
 	    headers?: Record<string, string>;
 	
@@ -65,6 +67,7 @@ export namespace downloader {
 	        this.percentage = source["percentage"];
 	        this.status = source["status"];
 	        this.scheduledAt = this.convertValues(source["scheduledAt"], null);
+	        this.createdAt = this.convertValues(source["createdAt"], null);
 	        this.parts = this.convertValues(source["parts"], PartState);
 	        this.headers = source["headers"];
 	    }

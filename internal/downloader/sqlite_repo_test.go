@@ -3,6 +3,7 @@ package downloader
 import (
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestSQLiteRepository_CRUD(t *testing.T) {
@@ -133,8 +134,8 @@ func TestSQLiteRepository_SchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetSchemaVersion failed: %v", err)
 	}
-	if version != 2 {
-		t.Errorf("expected schema version 2, got %d", version)
+	if version != 3 {
+		t.Errorf("expected schema version 3, got %d", version)
 	}
 	_ = repo.Close()
 
@@ -144,8 +145,8 @@ func TestSQLiteRepository_SchemaVersion(t *testing.T) {
 		t.Fatalf("failed to reopen repo: %v", err)
 	}
 	reopenedVer, _ := reopened.GetSchemaVersion()
-	if reopenedVer != 2 {
-		t.Errorf("expected schema version 2 on reopen, got %d", reopenedVer)
+	if reopenedVer != 3 {
+		t.Errorf("expected schema version 3 on reopen, got %d", reopenedVer)
 	}
 }
 
@@ -218,5 +219,59 @@ func TestSQLiteRepository_HeadersPersistence(t *testing.T) {
 	}
 	if all[0].Headers == nil || all[0].Headers["User-Agent"] != "Downstream/1.0" {
 		t.Errorf("expected User-Agent in GetAllDownloads, got %+v", all[0].Headers)
+	}
+}
+
+func TestSQLiteRepository_CreatedAtPersistence(t *testing.T) {
+	tempDir := t.TempDir()
+	repo, err := NewSQLiteRepository(filepath.Join(tempDir, "test_created_at.db"))
+	if err != nil {
+		t.Fatalf("failed to create repo: %v", err)
+	}
+
+	initialTime := time.Date(2026, 11, 10, 15, 30, 0, 0, time.UTC)
+	state := &DownloadState{
+		ID:        "test-created-at",
+		URL:       "http://example.com/file.zip",
+		Filename:  "file.zip",
+		CreatedAt: initialTime,
+		Status:    StateQueue,
+	}
+
+	// 1. Save and verify CreatedAt is retrieved by GetDownload
+	if err := repo.SaveDownload(state); err != nil {
+		t.Fatalf("SaveDownload failed: %v", err)
+	}
+
+	got, err := repo.GetDownload("test-created-at")
+	if err != nil || got == nil {
+		t.Fatalf("GetDownload failed: %v", err)
+	}
+	if got.CreatedAt.Unix() != initialTime.Unix() {
+		t.Errorf("expected CreatedAt %v, got %v", initialTime.Unix(), got.CreatedAt.Unix())
+	}
+
+	// 2. Verify GetAllDownloads retrieves CreatedAt
+	all, err := repo.GetAllDownloads()
+	if err != nil || len(all) == 0 {
+		t.Fatalf("GetAllDownloads failed: %v", err)
+	}
+	if all[0].CreatedAt.Unix() != initialTime.Unix() {
+		t.Errorf("expected all[0].CreatedAt %v, got %v", initialTime.Unix(), all[0].CreatedAt.Unix())
+	}
+
+	// 3. Verify updating status does NOT overwrite initial CreatedAt (coalesce behavior)
+	state.Status = StateCompleted
+	state.CreatedAt = initialTime.Add(2 * time.Hour) // Attempt to change timestamp on update
+	if err := repo.SaveDownload(state); err != nil {
+		t.Fatalf("SaveDownload update failed: %v", err)
+	}
+
+	updated, err := repo.GetDownload("test-created-at")
+	if err != nil || updated == nil {
+		t.Fatalf("GetDownload after update failed: %v", err)
+	}
+	if updated.CreatedAt.Unix() != initialTime.Unix() {
+		t.Errorf("expected CreatedAt to remain %v, but was overwritten to %v", initialTime.Unix(), updated.CreatedAt.Unix())
 	}
 }

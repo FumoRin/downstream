@@ -45,6 +45,7 @@ func (m *DownloadManager) StartDownloadWithHeaders(generatedID, url, filename, d
 			Filename:  filename,
 			Category:  catName,
 			TotalSize: 0,
+			CreatedAt: time.Now(),
 			Headers:   headers,
 		}
 	} else if len(headers) > 0 {
@@ -286,6 +287,7 @@ func (m *DownloadManager) ScheduleDownload(id, url, customFilename string, ctx c
 		Filename:    resolvedFilename,
 		TotalSize:   totalSize,
 		Status:      StateScheduled,
+		CreatedAt:   time.Now(),
 		ScheduledAt: &scheduledAt,
 	}
 

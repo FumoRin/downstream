@@ -68,6 +68,7 @@ type DownloadState struct {
 	Percentage  float64           `json:"percentage"`
 	Status      DownloadStatus    `json:"status"`
 	ScheduledAt *time.Time        `json:"scheduledAt"`
+	CreatedAt   time.Time         `json:"createdAt"`
 	Parts       []*PartState      `json:"parts,omitempty"`
 	Headers     map[string]string `json:"headers,omitempty"`
 }
