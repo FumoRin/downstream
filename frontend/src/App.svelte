@@ -14,6 +14,7 @@
 
   import { showToast } from "./utils/toast.svelte";
   import { formatBytes, splitPath } from "./utils/formatters";
+  import { speedTracker } from "./utils/speedHistory.svelte";
 
   // Wails auto-generated Go bindings
   import {
@@ -53,6 +54,7 @@
   let externalPromptUrl = $state("");
   let externalPromptFilename = $state("");
   let externalPromptHeaders = $state<Record<string, string> | null>(null);
+  let speedHistoryTimer: ReturnType<typeof setInterval> | null = null;
 
   // Status Bar State
   let showStatusBar = $state(
@@ -375,6 +377,7 @@
 
     for (const id of toDelete) {
       previousSizes.delete(id);
+      speedTracker.deleteItem(id)
       try {
         await DeleteDownload(id, deleteFiles);
       } catch (e) {
@@ -492,6 +495,9 @@
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
     }
+    if (speedHistoryTimer !== null) {
+      clearInterval(speedHistoryTimer);
+    }
     EventsOff(
       "download:progress",
       "download:external_added",
@@ -503,6 +509,14 @@
     await loadSettings();
     await loadDownloads();
     await fetchDiskStorage();
+
+    speedHistoryTimer = setInterval(() => {
+      for (const d of downloads) {
+        if (d.status === 1) {
+          speedTracker.recordSample(d.id, d.speed || 0);
+        }
+      }
+    }, 1000);
 
     // Stream real-time progress updates from Go backend (batched via requestAnimationFrame)
     const pendingProgressQueue = new Map<string, any>();

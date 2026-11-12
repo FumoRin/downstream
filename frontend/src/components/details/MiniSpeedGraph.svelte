@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { PulseIcon } from "phosphor-svelte";
   import { formatSpeed } from "../../utils/formatters";
+  import { speedTracker } from "../../utils/speedHistory.svelte";
 
   interface Props {
     speed?: number;
@@ -12,17 +13,63 @@
   let { speed = 0, status = 0, itemId = "" }: Props = $props();
 
   let canvas: HTMLCanvasElement;
-  let history: number[] = new Array(60).fill(0);
-  let peakSpeed = $state(0);
-  let trackedItemId = "";
+  let historyData = $derived(speedTracker.getHistory(itemId));
 
-  // Reset history and peak when the selected download item changes
-  $effect(() => {
-    if (itemId !== trackedItemId) {
-      trackedItemId = itemId;
-      history = new Array(60).fill(0);
-      peakSpeed = 0;
-      drawChart();
+  // Determine colors & labels based on status
+  const theme = $derived.by(() => {
+    switch (status) {
+      case 1: // Active
+        return {
+          stroke: "#4fd6be", // tokyo-teal
+          gradientStart: "rgba(79, 214, 190, 0.25)",
+          gradientEnd: "rgba(79, 214, 190, 0.0)",
+          textClass: "text-tokyo-teal",
+          label: formatSpeed(speed),
+          badge: null,
+        };
+      case 2: // Paused
+        return {
+          stroke: "#ff9e64", // tokyo-orange
+          gradientStart: "rgba(255, 158, 100, 0.20)",
+          gradientEnd: "rgba(255, 158, 100, 0.0)",
+          textClass: "text-tokyo-orange",
+          label: "Paused",
+          badge: "⏸ Paused",
+          badgeClass:
+            "text-tokyo-orange bg-tokyo-orange/10 border-tokyo-orange/20",
+        };
+      case 3: // Completed
+        return {
+          stroke: "#9ece6a", // tokyo-green
+          gradientStart: "rgba(158, 206, 106, 0.20)",
+          gradientEnd: "rgba(158, 206, 106, 0.0)",
+          textClass: "text-tokyo-green",
+          label: "Completed",
+          badge: "✓ Finished",
+          badgeClass:
+            "text-tokyo-green bg-tokyo-green/10 border-tokyo-green/20",
+        };
+      case 4: // Failed
+        return {
+          stroke: "#f7768e", // tokyo-red
+          gradientStart: "rgba(247, 118, 142, 0.20)",
+          gradientEnd: "rgba(247, 118, 142, 0.0)",
+          textClass: "text-tokyo-red",
+          label: "Failed",
+          badge: "✕ Failed",
+          badgeClass: "text-tokyo-red bg-tokyo-red/10 border-tokyo-red/20",
+        };
+      default: // Queued / Scheduled
+        return {
+          stroke: "#bb9af7", // tokyo-purple
+          gradientStart: "rgba(187, 154, 247, 0.20)",
+          gradientEnd: "rgba(187, 154, 247, 0.0)",
+          textClass: "text-tokyo-purple",
+          label: "Queued",
+          badge: "⏳ Queued",
+          badgeClass:
+            "text-tokyo-purple bg-tokyo-purple/10 border-tokyo-purple/20",
+        };
     }
   });
 
@@ -35,13 +82,14 @@
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
+    const history = historyData.history;
     const max = Math.max(...history, 1024 * 1024); // at least 1MB scale
     const step = w / (history.length - 1);
 
-    // Gradient fill
+    // Gradient fill using status theme
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, "rgba(79, 214, 190, 0.25)");
-    gradient.addColorStop(1, "rgba(79, 214, 190, 0.0)");
+    gradient.addColorStop(0, theme.gradientStart);
+    gradient.addColorStop(1, theme.gradientEnd);
 
     ctx.beginPath();
     ctx.moveTo(0, h);
@@ -58,7 +106,7 @@
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Solid stroke line
+    // Solid stroke line using status theme
     ctx.beginPath();
     for (let i = 0; i < history.length; i++) {
       const x = i * step;
@@ -66,28 +114,19 @@
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
-    ctx.strokeStyle = "#4fd6be"; // tokyo-teal
+    ctx.strokeStyle = theme.stroke;
     ctx.lineWidth = 1.8;
     ctx.stroke();
   }
 
+  $effect(() => {
+    if (historyData || status) {
+      drawChart();
+    }
+  });
+
   onMount(() => {
     drawChart();
-
-    // Sample speed once every second for true 60s rolling window
-    const timer = setInterval(() => {
-      const current = status === 1 ? speed : 0;
-      if (current > peakSpeed) {
-        peakSpeed = current;
-      }
-      history.shift();
-      history.push(current);
-      drawChart();
-    }, 1000);
-
-    return () => {
-      clearInterval(timer);
-    };
   });
 </script>
 
@@ -97,22 +136,38 @@
   <!-- Header -->
   <div class="flex items-center justify-between text-xs">
     <div class="flex items-center gap-1.5 text-tokyo-textMuted">
-      <PulseIcon size={14} class="text-tokyo-teal" />
+      <PulseIcon size={14} class={theme.textClass} />
       <span class="text-[11px] font-medium uppercase tracking-wider"
         >Transfer Rate</span
       >
     </div>
-    <span class="font-mono font-bold text-tokyo-teal">
-      {status === 1 ? formatSpeed(speed) : "-"}
+    <span class="font-mono font-bold {theme.textClass}">
+      {theme.label}
     </span>
   </div>
 
-  <!-- Canvas Chart -->
+  <!-- Canvas Chart with Status Overlay -->
   <div
-    class="h-[100px] w-full bg-tokyo-bgSurface/30 border border-tokyo-borderSubtle rounded overflow-hidden"
+    class="relative h-[100px] w-full bg-tokyo-bgSurface/30 border border-tokyo-borderSubtle rounded overflow-hidden"
   >
-    <canvas bind:this={canvas} width={300} height={100} class="w-full h-full block"
+    <canvas
+      bind:this={canvas}
+      width={300}
+      height={100}
+      class="w-full h-full block"
     ></canvas>
+
+    {#if theme.badge}
+      <div
+        class="absolute inset-0 flex items-center justify-center bg-tokyo-bgDark/30 pointer-events-none"
+      >
+        <span
+          class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border shadow-sm backdrop-blur-[2px] {theme.badgeClass}"
+        >
+          {theme.badge}
+        </span>
+      </div>
+    {/if}
   </div>
 
   <!-- Footer -->
@@ -121,7 +176,7 @@
   >
     <span
       >Peak: <strong class="text-tokyo-textMain"
-        >{formatSpeed(peakSpeed)}</strong
+        >{formatSpeed(historyData.peak)}</strong
       ></span
     >
     <span>60s Rolling</span>
