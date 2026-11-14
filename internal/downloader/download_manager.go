@@ -24,6 +24,7 @@ func (m *DownloadManager) StartDownload(generatedID, url, filename, dir string, 
 
 // StartDownloadWithHeaders starts a download with optional custom request headers (cookies, auth, etc.)
 func (m *DownloadManager) StartDownloadWithHeaders(generatedID, url, filename, dir string, headers map[string]string, limiters ...*rate.Limiter) {
+	filename = cleanFilename(filename)
 	var limiter *rate.Limiter
 	if len(limiters) > 0 && limiters[0] != nil {
 		limiter = limiters[0]

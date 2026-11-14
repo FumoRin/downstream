@@ -267,6 +267,9 @@ func TestIPC_Download_WithHeadersAndCookies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to init repo: %v", err)
 	}
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	_ = repo.SetSettings("browser_download_action", "auto")
 	settings := downloader.Settings{
@@ -314,6 +317,9 @@ func TestIPC_UpdateSettings_DynamicSwitch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to init repo: %v", err)
 	}
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	_ = repo.SetSettings("browser_download_action", "auto")
 	settings := downloader.Settings{

@@ -134,3 +134,104 @@ func TestParseRateLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveFilename_NonLatin(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		cdHeader string
+		expected string
+	}{
+		{
+			name:     "RFC 5987 filename* with UTF-8 and no lang",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename*=UTF-8''%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf`,
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "RFC 5987 filename* with language tag",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename*=UTF-8'ja'%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf`,
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "RFC 5987 filename* with fallback filename",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename="fallback.pdf"; filename*=UTF-8''%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf`,
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "Percent-encoded standard filename",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename="%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf"`,
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "Raw UTF-8 in quotes",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename="日本語.pdf"`,
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "RFC 2047 MIME encoded-word",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename="=?UTF-8?B?5pel5pys6KqeLnBkZg==?="`,
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "URL path fallback with percent-encoding",
+			url:      "http://example.com/files/%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf",
+			cdHeader: "",
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "URL path fallback with query parameters",
+			url:      "http://example.com/files/%E6%97%A5%E6%9C%AC%E8%AA%9E.pdf?token=abc123xyz",
+			cdHeader: "",
+			expected: "日本語.pdf",
+		},
+		{
+			name:     "Windows-1252 mojibake (Google Drive Japanese raw header)",
+			url:      "http://example.com/download",
+			cdHeader: `attachment; filename="ã‚·ãƒ£ãƒ³ãƒ†ã‚£(r-906 Remix).mp3"`,
+			expected: "シャンティ(r-906 Remix).mp3",
+		},
+		{
+			name:     "Raw ISO-8859-1 byte sequence (Google Drive C1 controls)",
+			url:      "http://example.com/download",
+			cdHeader: "attachment; filename=\"\xe3\x82\xb7\xe3\x83\xa3\xe3\x83\xb3\xe3\x83\x86\xe3\x82\xa3(r-906 Remix).mp3\"",
+			expected: "シャンティ(r-906 Remix).mp3",
+		},
+		{
+			name:     "Cyrillic Russian raw ISO-8859-1 header",
+			url:      "http://example.com/download",
+			cdHeader: "attachment; filename=\"\xd0\x9f\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82_\xd0\xbc\xd0\xb8\xd1\x80.zip\"",
+			expected: "Привет_мир.zip",
+		},
+		{
+			name:     "Simplified Chinese raw ISO-8859-1 header",
+			url:      "http://example.com/download",
+			cdHeader: "attachment; filename=\"\xe4\xb8\xad\xe6\x96\x87\xe7\xae\x80\xe4\xbd\x93\xe6\xb5\x8b\xe8\xaf\x95.tar.gz\"",
+			expected: "中文简体测试.tar.gz",
+		},
+		{
+			name:     "Traditional Chinese raw ISO-8859-1 header",
+			url:      "http://example.com/download",
+			cdHeader: "attachment; filename=\"\xe7\xb9\x81\xe9\xab\x94\xe4\xb8\xad\xe6\x96\x87\xe6\xb8\xac\xe8\xa9\xa6.pdf\"",
+			expected: "繁體中文測試.pdf",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := &http.Response{Header: make(http.Header)}
+			if tc.cdHeader != "" {
+				resp.Header.Set("Content-Disposition", tc.cdHeader)
+			}
+			got := resolveFilename(tc.url, DownloadOptions{}, resp)
+			if got != tc.expected {
+				t.Errorf("expected '%s', got '%s'", tc.expected, got)
+			}
+		})
+	}
+}
