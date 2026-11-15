@@ -34,6 +34,7 @@
     multiSelectMode?: boolean;
     sortField?: SortField;
     sortOrder?: SortOrder;
+    etaFormat?: "adaptive" | "fixed";
     onToggleSelect?: (id: string, isMulti: boolean, isShift: boolean) => void;
     onToggleSelectAll?: () => void;
     onSortChange?: (field: SortField) => void;
@@ -51,6 +52,7 @@
     multiSelectMode = false,
     sortField = "createdAt",
     sortOrder = "desc",
+    etaFormat = "adaptive",
     onToggleSelect,
     onToggleSelectAll,
     onSortChange,
@@ -293,7 +295,7 @@
           </div>
         </th>
 
-        <th class="w-16 th-header" onclick={() => onSortChange?.("eta")}>
+        <th class="w-20 th-header" onclick={() => onSortChange?.("eta")}>
           <div class="flex items-center gap-1">
             <span>ETA</span>
             {#if sortField === "eta"}
@@ -493,7 +495,7 @@
             {item.status === 3
               ? "Done"
               : item.status === 1
-                ? formatETA(item.eta)
+                ? formatETA(item.eta, etaFormat)
                 : "--"}
           </td>
 

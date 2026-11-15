@@ -21,6 +21,7 @@
   interface Props {
     open?: boolean;
     showStatusBar?: boolean;
+    etaFormat?: "adaptive" | "fixed";
     onClose?: () => void;
     onSaved?: () => void;
   }
@@ -28,6 +29,7 @@
   let {
     open = $bindable(false),
     showStatusBar = $bindable(true),
+    etaFormat = $bindable("adaptive"),
     onClose,
     onSaved,
   }: Props = $props();
@@ -44,6 +46,7 @@
   let browserDownloadAction = $state<"prompt" | "auto">("prompt");
 
   // Status & Feedback States
+  let etaFormatLocal = $state<"adaptive" | "fixed">("adaptive");
   let initialDownloadDir = $state("");
   let isLoading = $state(false);
   let isSaving = $state(false);
@@ -70,6 +73,7 @@
     errorMsg = "";
     saveSuccess = false;
     showStatusBarLocal = showStatusBar;
+    etaFormatLocal = etaFormat;
     try {
       const s = await GetSettings();
       if (s) {
@@ -188,10 +192,12 @@
       });
 
       showStatusBar = showStatusBarLocal;
+      etaFormat = etaFormatLocal;
       localStorage.setItem(
         "downstream_show_statusbar",
         String(showStatusBarLocal),
       );
+      localStorage.setItem("downstream_eta_format", etaFormatLocal);
 
       saveSuccess = true;
       onSaved?.();
@@ -503,6 +509,41 @@
                   </span>
                 </div>
               </label>
+            </div>
+
+            <!-- ETA Format Selection -->
+            <div class="space-y-1.5 pt-1">
+              <span class="text-xs font-medium text-tokyo-textSub block">
+                ETA Format
+              </span>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onclick={() => (etaFormatLocal = "adaptive")}
+                  class="h-9 px-3 rounded border text-xs flex items-center justify-center gap-1.5 transition-colors font-medium {etaFormatLocal ===
+                  'adaptive'
+                    ? 'border-tokyo-teal bg-tokyo-teal/10 text-tokyo-teal'
+                    : 'border-tokyo-border bg-tokyo-bgSurface text-tokyo-textMuted hover:border-tokyo-borderLight hover:text-tokyo-textMain'}"
+                >
+                  <span>Adaptive (MM:SS / HH:MM:SS)</span>
+                </button>
+                <button
+                  type="button"
+                  onclick={() => (etaFormatLocal = "fixed")}
+                  class="h-9 px-3 rounded border text-xs flex items-center justify-center gap-1.5 transition-colors font-medium {etaFormatLocal ===
+                  'fixed'
+                    ? 'border-tokyo-teal bg-tokyo-teal/10 text-tokyo-teal'
+                    : 'border-tokyo-border bg-tokyo-bgSurface text-tokyo-textMuted hover:border-tokyo-borderLight hover:text-tokyo-textMain'}"
+                >
+                  <span>Fixed (HH:MM:SS)</span>
+                </button>
+              </div>
+              <span
+                class="text-[11px] text-tokyo-textMuted leading-tight block"
+              >
+                Adaptive displays MM:SS when under 1 hour and switches to
+                HH:MM:SS when over 1 hour. Fixed always displays HH:MM:SS.
+              </span>
             </div>
 
             <div class="space-y-1.5 pt-1">

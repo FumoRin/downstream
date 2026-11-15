@@ -62,6 +62,13 @@
       ? localStorage.getItem("downstream_show_statusbar") !== "false"
       : true,
   );
+  let etaFormat = $state<"adaptive" | "fixed">(
+    typeof localStorage !== "undefined" &&
+      localStorage.getItem("downstream_eta_format") === "fixed"
+      ? "fixed"
+      : "adaptive",
+  );
+
   let sessionDownloaded = $state(0);
   let previousSizes = new Map<string, number>();
   let diskStorage = $state<{ free: number; total: number } | null>(null);
@@ -377,7 +384,7 @@
 
     for (const id of toDelete) {
       previousSizes.delete(id);
-      speedTracker.deleteItem(id)
+      speedTracker.deleteItem(id);
       try {
         await DeleteDownload(id, deleteFiles);
       } catch (e) {
@@ -656,6 +663,7 @@
         {multiSelectMode}
         {sortField}
         {sortOrder}
+        {etaFormat}
         onToggleSelect={handleToggleSelect}
         onToggleSelectAll={handleToggleSelectAll}
         onSortChange={handleSortChange}
@@ -716,6 +724,7 @@
   <SettingsModal
     bind:open={isSettingsModalOpen}
     bind:showStatusBar
+    bind:etaFormat
     onSaved={async () => {
       await fetchDiskStorage();
       await loadSettings();

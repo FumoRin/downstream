@@ -11,12 +11,25 @@ export function formatSpeed(bytesPerSec: number) {
   return `${formatBytes(bytesPerSec)}/s`;
 }
 
-export function formatETA(seconds: number): string {
+export function formatETA(
+  seconds: number,
+  mode: "adaptive" | "fixed" = "adaptive",
+): string {
   if (seconds === undefined || seconds === null || seconds <= 0) return "--";
   if (!isFinite(seconds)) return "--";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  const totalSeconds = Math.floor(seconds);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+
+  const hStr = h.toString().padStart(2, "0");
+  const mStr = m.toString().padStart(2, "0");
+  const sStr = s.toString().padStart(2, "0");
+
+  if (mode === "fixed" || h > 0) {
+    return `${hStr}:${mStr}:${sStr}`;
+  }
+  return `${mStr}:${sStr}`;
 }
 
 export function formatDate(isoStr: string): string {
@@ -30,15 +43,15 @@ export function formatDate(isoStr: string): string {
   return `${m}-${day} ${h}:${min}`;
 }
 
-export function splitPath(fullPath: string): {filename: string; dir: string} {
-  if (!fullPath) return { filename: "download", dir: ""}
-  const normalized = fullPath.replace(/\\/g, "/")
-  const lastSlash = normalized.lastIndexOf("/")
-  if (lastSlash === -1 ) {
-    return {filename: fullPath, dir: ""}
+export function splitPath(fullPath: string): { filename: string; dir: string } {
+  if (!fullPath) return { filename: "download", dir: "" };
+  const normalized = fullPath.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+  if (lastSlash === -1) {
+    return { filename: fullPath, dir: "" };
   }
   return {
     filename: normalized.slice(lastSlash + 1),
-    dir: normalized.slice(0, lastSlash)
-  }
+    dir: normalized.slice(0, lastSlash),
+  };
 }
