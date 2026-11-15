@@ -491,7 +491,7 @@
           </td>
 
           <!-- ETA -->
-          <td class="td-mono-muted">
+          <td class="td-mono-muted whitespace-nowrap tabular-nums">
             {item.status === 3
               ? "Done"
               : item.status === 1

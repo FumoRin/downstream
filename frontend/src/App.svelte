@@ -229,12 +229,18 @@
           const rawStatus = (d.status !== undefined ? d.status : d.Status) ?? 0;
           const status =
             existing?.status === 2 && rawStatus === 1 ? 2 : rawStatus;
+          const isDownloading = status === 1;
+
           const totalSize =
             (d.totalSize ?? d.TotalSize) || existing?.totalSize || 0;
           const currentSize =
-            (d.currentSize ?? d.CurrentSize) || existing?.currentSize || 0;
+            isDownloading && existing?.currentSize
+              ? existing.currentSize
+              : (d.currentSize ?? d.CurrentSize) || existing?.currentSize || 0;
           let percentage =
-            d.percentage ?? d.Percentage ?? existing?.percentage ?? 0;
+            isDownloading && existing?.percentage
+              ? existing.percentage
+              : (d.percentage ?? d.Percentage ?? existing?.percentage ?? 0);
 
           if (status === 3) {
             percentage = 100;
@@ -252,8 +258,8 @@
             currentSize,
             percentage,
             speed:
-              status === 1 ? (d.speed ?? d.Speed ?? existing?.speed ?? 0) : 0,
-            eta: status === 1 ? (d.eta ?? d.ETA ?? existing?.eta ?? 0) : 0,
+              status === 1 ? (existing?.speed ?? d.speed ?? d.Speed ?? 0) : 0,
+            eta: status === 1 ? (existing?.eta ?? d.eta ?? d.ETA ?? 0) : 0,
             status,
             priority: "normal",
             createdAt:
@@ -268,7 +274,10 @@
               existing?.saveDir ||
               defaultDownloadDir ||
               "",
-            parts: d.parts || d.Parts || existing?.parts || [],
+            parts:
+              (isDownloading && existing?.parts && existing.parts.length > 0
+                ? existing.parts
+                : d.parts || d.Parts || existing?.parts) || [],
           };
         });
 
@@ -589,14 +598,15 @@
 
           if (isCompleted && prevStatus !== 3) {
             hasCompleted = true;
-            loadDownloads();
           }
-          loadDownloads();
           continue;
+        } else {
+          loadDownloads();
         }
       }
 
       if (hasCompleted) {
+        loadDownloads();
         fetchDiskStorage();
       }
     }
